@@ -38,10 +38,10 @@ void captureThread()
             continue;
         }
 
-        // cvtColor(frame, yuvImage, COLOR_BGR2YUV_YVYU);
-        // // cvtColor(frame, yuvImage, COLOR_BGR2YUV_UYVY);
+        cvtColor(frame, yuvImage, COLOR_BGR2YUV_YVYU);
+        // cvtColor(frame, yuvImage, COLOR_BGR2YUV_UYVY);
 
-        // cvtColor(yuvImage, rgbImage, COLOR_YUV2BGR_Y422);
+        cvtColor(yuvImage, rgbImage, COLOR_YUV2BGR_Y422);
 
         {
             std::lock_guard<std::mutex> lock(mtx);
@@ -49,7 +49,7 @@ void captureThread()
             bufferReady = true;
         }
         conditionVariable.notify_one();
-        // cv::imshow("RGB Image", rgbImage);
+        cv::imshow("RGB Image", rgbImage);
         cv::imshow("frame", frame);
 
         cv::waitKey(100);
