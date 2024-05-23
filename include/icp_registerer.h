@@ -13,6 +13,8 @@
 #include <pcl/registration/icp.h>
 #include <pcl/registration/correspondence_estimation.h>
 
+using namespace std;
+
 typedef pcl::PointXYZ PointT;
 typedef pcl::PointCloud<PointT> PointCloud;
 typedef pcl::Registration<pcl::PointXYZ, pcl::PointXYZ, float>::Matrix4 Matrix4;
@@ -25,7 +27,9 @@ public:
 
     // Methods
     void computePCLICP();
+    void computeHungarian();
     Matrix4 getTransformed();
+    // Matrix4 getHTransformed();
     // void computeICP();
     // void printResults() const;
 

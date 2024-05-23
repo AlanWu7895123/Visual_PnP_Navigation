@@ -77,7 +77,7 @@ vector<pair<double, double>> readNPoints(string filename)
             continue;
         }
 
-        std::cout << "Read numbers: " << i << ", " << numbers[0] << ", " << numbers[1] << std::endl;
+        // std::cout << "Read numbers: " << i << ", " << numbers[0] << ", " << numbers[1] << std::endl;
         i++;
         pair<double, double> tmp = {numbers[0], numbers[1]};
         pointsN.push_back(tmp);

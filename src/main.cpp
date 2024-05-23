@@ -45,12 +45,13 @@ void captureThread()
 
         {
             std::lock_guard<std::mutex> lock(mtx);
-            frame.copyTo(buffer);
+            rgbImage.copyTo(buffer);
+            // frame.copyTo(buffer);
             bufferReady = true;
         }
         conditionVariable.notify_one();
         cv::imshow("RGB Image", rgbImage);
-        cv::imshow("frame", frame);
+        // cv::imshow("frame", frame);
 
         cv::waitKey(100);
     }
@@ -65,6 +66,8 @@ void processingThread()
         0, 1, 0, 0,
         0, 0, 1, 0,
         0, 0, 0, 1;
+    std::vector<std::pair<double, double>> points37;
+    points37 = read37Points("../data/points.txt");
     while (!stopThreads)
     {
         std::unique_lock<std::mutex> lock(mtx);
@@ -90,15 +93,13 @@ void processingThread()
             processor.detectCircles();
             // processor.saveResults();
 
-            std::vector<std::pair<double, double>> points37;
             std::vector<std::pair<double, double>> pointsN;
 
-            points37 = read37Points("../data/points.txt");
             pointsN = readNPoints("../data/circles.txt");
 
             ICPRegisterer ICPRegisterer(pointsN, points37, transformed);
             ICPRegisterer.computePCLICP();
-            transformed = ICPRegisterer.getTransformed();
+            transformed = ICPRegisterer.getHTransformed();
 
             cv::imshow("Processed Frame", processor.output);
             cv::waitKey(1);
@@ -108,45 +109,59 @@ void processingThread()
 
 int main()
 {
-    std::thread t1(captureThread);
-    std::thread t2(processingThread);
+    // std::thread t1(captureThread);
+    // std::thread t2(processingThread);
 
-    std::cout << "Press Enter to stop..." << std::endl;
-    std::cin.get();
+    // std::cout << "Press Enter to stop..." << std::endl;
+    // std::cin.get();
 
-    {
-        std::lock_guard<std::mutex> lock(mtx);
-        stopThreads = true;
-    }
-    conditionVariable.notify_all();
+    // {
+    //     std::lock_guard<std::mutex> lock(mtx);
+    //     stopThreads = true;
+    // }
+    // conditionVariable.notify_all();
 
-    t1.join();
-    t2.join();
+    // t1.join();
+    // t2.join();
 
-    // Matrix4 transformed = Matrix4::Zero();
-    // transformed << 1, 0, 0, 0,
-    //     0, 1, 0, 0,
-    //     0, 0, 1, 0,
+    string filename;
+    cin >> filename;
+    ImageProcessor processor(filename);
+
+    processor.readImage();
+    processor.convertToGray();
+    processor.applyThreshold();
+    processor.findContours();
+    processor.detectCircles();
+    processor.saveResults();
+
+    Matrix4 transformed = Matrix4::Zero();
+    transformed << 1, 0, 0, 0,
+        0, 1, 0, 0,
+        0, 0, 1, 0,
+        0, 0, 0, 1;
+
+    // transformed << 0.992645, 0.121066, 0, 101.66,
+    //     -0.121066, 0.992645, 0, 196.564,
+    //     0, 0, 1, 1800,
     //     0, 0, 0, 1;
 
-    // // transformed << 0.99894, 0.0460383, 0, -141.503,
-    // //     0.0460383, 0.99894, 0, 171.779,
-    // //     0, 0, 1, 1800,
-    // //     0, 0, 0, 1;
+    // std::cout << "transformed1:" << std::endl
+    //           << transformed << std::endl;
+    std::vector<std::pair<double, double>> points37;
+    std::vector<std::pair<double, double>> pointsN;
 
-    // // std::cout << "transformed1:" << std::endl
-    // //           << transformed << std::endl;
-    // std::vector<std::pair<double, double>> points37;
-    // std::vector<std::pair<double, double>> pointsN;
+    points37 = read37Points("../data/points.txt");
+    pointsN = readNPoints("../data/circles.txt");
 
-    // points37 = read37Points("../data/points.txt");
-    // pointsN = readNPoints("../data/circles2.txt");
+    ICPRegisterer ICPRegisterer(pointsN, points37, transformed);
+    ICPRegisterer.computePCLICP();
+    transformed = ICPRegisterer.getTransformed();
+    std::cout << "Next transformed:" << std::endl
+              << transformed << std::endl;
 
-    // ICPRegisterer ICPRegisterer(pointsN, points37, transformed);
-    // ICPRegisterer.computePCLICP();
-    // transformed = ICPRegisterer.getTransformed();
-    // // std::cout << "Next transformed:" << std::endl
-    // //           << transformed << std::endl;
+    cout << "hungarian" << endl;
+    ICPRegisterer.computeHungarian();
 
     return 0;
 }

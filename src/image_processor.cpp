@@ -49,12 +49,14 @@ void ImageProcessor::detectCircles()
     for (size_t i = 0; i < circles.size(); i++)
     {
         Point center(cvRound(circles[i][0]), cvRound(circles[i][1]));
+        // out << center.x << " " << center.y << endl;
         // out << center.x * 430 / 150 << " " << -center.y * 430 / 150 << endl;
-        out << (center.x - image.cols / 2) * rate << " " << -(center.y - image.rows / 2) * rate << endl;
+        out << (center.x - image.cols / 2) * 430 / 150 << " " << -(center.y - image.rows / 2) * 430 / 150 << endl;
         int radius = cvRound(circles[i][2]);
 
         circle(output, center, 3, Scalar(0, 255, 0), -1, LINE_AA);
-        string center_text = "No." + to_string(i) + " " + to_string(center.x) + "," + to_string(center.y);
+        string center_text = "No." + to_string(i) + " " + to_string((center.x - image.cols / 2) * 430 / 150) + "," + to_string(-(center.y - image.rows / 2) * 430 / 150);
+        // string center_text = "No." + to_string(i) + " " + to_string(center.x) + "," + to_string(center.y);
         Point text_position(center.x - 35, center.y - 35);
         putText(output, center_text, text_position, FONT_HERSHEY_SIMPLEX, 0.5, Scalar(255, 255, 0), 1, LINE_AA);
         circle(output, center, radius, Scalar(0, 0, 255), 3, LINE_AA);
@@ -63,6 +65,6 @@ void ImageProcessor::detectCircles()
 
 void ImageProcessor::saveResults()
 {
-    imwrite("../data/contours_result.jpg", result);
-    imwrite("../data/hough_result.jpg", output);
+    imwrite("../data/" + filename + "_contours_result.jpg", result);
+    imwrite("../data/" + filename + "_hough_result.jpg", output);
 }

@@ -1,6 +1,8 @@
+#include <eigen3/unsupported/Eigen/NonLinearOptimization>
+#include <eigen3/unsupported/Eigen/NumericalDiff>
 #include "icp_registerer.h"
+#include "hungarian.h"
 
-using namespace std;
 using namespace Eigen;
 
 ICPRegisterer::ICPRegisterer(const std::vector<std::pair<double, double>> &A, const std::vector<std::pair<double, double>> &B, const Matrix4 transformed)
@@ -83,11 +85,79 @@ Matrix4 ICPRegisterer::getTransformed()
     return icp.getFinalTransformation();
 }
 
+void ICPRegisterer::computeHungarian()
+{
+    if (cloudA->points.size() < 6 || cloudA->points.size() > 12)
+        return;
+
+    // 构建代价矩阵
+    int n = cloudA->points.size();
+    MatrixXd costMatrix(n, n);
+    for (int i = 0; i < n; ++i)
+    {
+        for (int j = 0; j < n; ++j)
+        {
+            double dx = cloudA->points[i].x - cloudB->points[j].x;
+            double dy = cloudA->points[i].y - cloudB->points[j].y;
+            double dz = cloudA->points[i].z - cloudB->points[j].z;
+            costMatrix(i, j) = sqrt(dx * dx + dy * dy + dz * dz);
+        }
+    }
+
+    // 使用匈牙利算法求解最优匹配
+    HungarianAlgorithm hungarian;
+    std::vector<int> assignment;
+    double cost = hungarian.Solve(costMatrix, assignment);
+
+    if (assignment.size() != n)
+    {
+        cout << "点云配准失败！" << endl;
+        return;
+    }
+
+    // 输出匹配关系
+    cout << "配准后的点云匹配关系：" << endl;
+    for (size_t i = 0; i < assignment.size(); ++i)
+    {
+        cout << "点 " << i << " 在 B 中的对应点索引：" << assignment[i] + 1 << endl;
+    }
+
+    // 提取匹配点对
+    vector<cv::Point3f> objectPoints;
+    vector<cv::Point2f> imagePoints;
+    for (size_t i = 0; i < assignment.size(); ++i)
+    {
+        const PointT &srcPoint = cloudA->points[i];
+        const PointT &dstPoint = cloudB->points[assignment[i]];
+        objectPoints.push_back(cv::Point3f(dstPoint.x, dstPoint.y, dstPoint.z));
+        imagePoints.push_back(cv::Point2f(srcPoint.x, srcPoint.y));
+    }
+
+    // 假设相机内参矩阵 K（这里使用单位矩阵，实际应根据具体相机参数设置）
+    cv::Mat K = cv::Mat::eye(3, 3, CV_64F);
+
+    // 求解相机位姿
+    cv::Mat rvec, tvec;
+    cv::solvePnP(objectPoints, imagePoints, K, cv::Mat(), rvec, tvec);
+
+    // 将旋转向量转换为旋转矩阵
+    cv::Mat R;
+    cv::Rodrigues(rvec, R);
+
+    // 打印相机位置（即平移向量 tvec）
+    cout << "相机坐标：" << endl
+         << "X: " << tvec.at<double>(0) << ", Y: " << tvec.at<double>(1) << ", Z: " << tvec.at<double>(2) << endl;
+}
+
 void ICPRegisterer::computePCLICP()
 {
     // pcl::IterativeClosestPoint<PointT, PointT> icp;
+    if (cloudA->points.size() < 6 || cloudA->points.size() > 12)
+        return;
     icp.setInputSource(cloudA);
     icp.setInputTarget(cloudB);
+
+    // icp.setMaxCorrespondenceDistance(250);
 
     // 执行点云配准
     // PointCloud::Ptr cloudARegistered(new PointCloud);
