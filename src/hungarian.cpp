@@ -5,6 +5,78 @@
 using namespace std;
 using namespace Eigen;
 
+// HungarianAlgorithm::HungarianAlgorithm(const std::vector<std::vector<double>> &costMatrix)
+//     : costMatrix(costMatrix), n(costMatrix.size()), m(costMatrix[0].size())
+// {
+//     u.assign(n, 0);
+//     v.assign(m, 0);
+//     p.assign(m, -1);
+//     way.assign(m, -1);
+// }
+
+// double HungarianAlgorithm::solve(std::vector<int> &result)
+// {
+//     result.assign(n, -1);
+//     for (int i = 0; i < n; ++i)
+//     {
+//         std::vector<double> minv(m, INF);
+//         std::vector<bool> used(m, false);
+//         int j0 = -1, j1 = 0;
+//         p[0] = i;
+//         do
+//         {
+//             used[j1] = true;
+//             int i0 = p[j1];
+//             double delta = INF;
+//             for (int j = 0; j < m; ++j)
+//             {
+//                 if (!used[j])
+//                 {
+//                     double cur = costMatrix[i0][j] - u[i0] - v[j];
+//                     if (cur < minv[j])
+//                     {
+//                         minv[j] = cur;
+//                         way[j] = j1;
+//                     }
+//                     if (minv[j] < delta)
+//                     {
+//                         delta = minv[j];
+//                         j0 = j;
+//                     }
+//                 }
+//             }
+//             for (int j = 0; j <= m; ++j)
+//             {
+//                 if (used[j])
+//                 {
+//                     u[p[j]] += delta;
+//                     v[j] -= delta;
+//                 }
+//                 else
+//                 {
+//                     minv[j] -= delta;
+//                 }
+//             }
+//             j1 = j0;
+//         } while (p[j1] != -1);
+//         do
+//         {
+//             int j2 = way[j1];
+//             p[j1] = p[j2];
+//             j1 = j2;
+//         } while (j1);
+//     }
+//     result.resize(n);
+//     for (int j = 0; j < m; ++j)
+//     {
+//         if (p[j] != -1)
+//         {
+//             result[p[j]] = j;
+//         }
+//     }
+//     return -v[0];
+// }
+
 double HungarianAlgorithm::Solve(const MatrixXd &costMatrix, vector<int> &assignment)
 {
     int n = costMatrix.rows();

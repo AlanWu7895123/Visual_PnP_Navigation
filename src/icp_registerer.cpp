@@ -92,14 +92,26 @@ void ICPRegisterer::computeHungarian()
 
     // 构建代价矩阵
     int n = cloudA->points.size();
+    int m = cloudB->points.size();
     MatrixXd costMatrix(n, n);
     for (int i = 0; i < n; ++i)
     {
         for (int j = 0; j < n; ++j)
         {
+            // double dx, dy, dz;
+            // if (i >= n)
+            // {
+            //     double dx = 10000 - cloudB->points[j].x;
+            //     double dy = 10000 - cloudB->points[j].y;
+            //     double dz = 10000 - cloudB->points[j].z;
+            // }
+            // else
+            // {
             double dx = cloudA->points[i].x - cloudB->points[j].x;
             double dy = cloudA->points[i].y - cloudB->points[j].y;
             double dz = cloudA->points[i].z - cloudB->points[j].z;
+            // }
+
             costMatrix(i, j) = sqrt(dx * dx + dy * dy + dz * dz);
         }
     }
@@ -143,10 +155,105 @@ void ICPRegisterer::computeHungarian()
     // 将旋转向量转换为旋转矩阵
     cv::Mat R;
     cv::Rodrigues(rvec, R);
+    // std::cout << "Rotation Matrix (R): " << std::endl
+    //           << R << std::endl;
 
-    // 打印相机位置（即平移向量 tvec）
-    cout << "相机坐标：" << endl
-         << "X: " << tvec.at<double>(0) << ", Y: " << tvec.at<double>(1) << ", Z: " << tvec.at<double>(2) << endl;
+    // 构建位姿矩阵 (4x4)
+    cv::Mat pose = cv::Mat::eye(4, 4, CV_64F);
+    R.copyTo(pose(cv::Rect(0, 0, 3, 3)));
+    tvec.copyTo(pose(cv::Rect(3, 0, 1, 3)));
+
+    // std::cout << "Pose Matrix: " << std::endl
+    //           << pose << std::endl;
+
+    // 求逆变换
+    cv::Mat pose_inv = pose.inv();
+    // std::cout << "Inverse Pose Matrix: " << std::endl
+    //           << pose_inv << std::endl;
+
+    // 相机在世界坐标系中的位置 (取出平移部分)
+    cv::Mat camera_position = pose_inv(cv::Rect(3, 0, 1, 3));
+    std::cout << "Camera Position in World Coordinates: " << std::endl
+              << "X: " << camera_position.at<double>(0) << ", "
+              << "Y: " << camera_position.at<double>(1) << ", "
+              << "Z: " << camera_position.at<double>(2) << std::endl;
+
+    // // 将旋转向量转换为旋转矩阵
+    // cv::Mat R;
+    // cv::Rodrigues(rvec, R);
+
+    // // 打印相机位置（即平移向量 tvec）
+    // cout << "相机坐标：" << endl
+    //      << "X: " << tvec.at<double>(0) << ", Y: " << tvec.at<double>(1) << ", Z: " << tvec.at<double>(2) << endl;
+    // if (cloudA->points.size() < 6 || cloudA->points.size() > 12)
+    // {
+    //     return;
+    // }
+
+    // pcl::registration::CorrespondenceEstimation<PointT, PointT> est;
+    // est.setInputSource(cloudA);
+    // est.setInputTarget(cloudB);
+    // pcl::Correspondences correspondences;
+    // est.determineCorrespondences(correspondences);
+
+    // std::vector<std::vector<double>> costMatrix(cloudA->points.size(), std::vector<double>(cloudB->points.size(), 0.0));
+    // for (size_t i = 0; i < cloudA->points.size(); ++i)
+    // {
+    //     for (size_t j = 0; j < cloudB->points.size(); ++j)
+    //     {
+    //         double dx = cloudA->points[i].x - cloudB->points[j].x;
+    //         double dy = cloudA->points[i].y - cloudB->points[j].y;
+    //         double dz = cloudA->points[i].z - cloudB->points[j].z;
+    //         costMatrix[i][j] = std::sqrt(dx * dx + dy * dy + dz * dz);
+    //     }
+    // }
+
+    // HungarianAlgorithm hungarian(costMatrix);
+    // std::vector<int> result;
+    // double cost = hungarian.solve(result);
+
+    // // 输出匹配关系
+    // cout << "配准后的点云匹配关系：" << endl;
+    // for (size_t i = 0; i < result.size(); ++i)
+    // {
+    //     if (result[i] != -1)
+    //     {
+    //         cout << "点 " << i << " 在 B 中的对应点索引：" << result[i] + 1 << endl;
+    //     }
+    // }
+
+    // std::vector<cv::Point3f> objectPoints;
+    // std::vector<cv::Point2f> imagePoints;
+    // for (size_t i = 0; i < result.size(); ++i)
+    // {
+    //     if (result[i] != -1)
+    //     {
+    //         const PointT &srcPoint = cloudA->points[i];
+    //         const PointT &dstPoint = cloudB->points[result[i]];
+    //         objectPoints.push_back(cv::Point3f(dstPoint.x, dstPoint.y, dstPoint.z));
+    //         imagePoints.push_back(cv::Point2f(srcPoint.x, srcPoint.y));
+    //     }
+    // }
+
+    // if (objectPoints.size() < 4)
+    // {
+    //     cout << "匹配点对太少，无法求解相机位姿！" << endl;
+    //     return;
+    // }
+
+    // cv::Mat K = cv::Mat::eye(3, 3, CV_64F);
+    // cv::Mat rvec, tvec;
+    // cv::solvePnP(objectPoints, imagePoints, K, cv::Mat(), rvec, tvec);
+
+    // cv::Mat R;
+    // cv::Rodrigues(rvec, R);
+
+    // cv::Mat pose = cv::Mat::eye(4, 4, CV_64F);
+    // R.copyTo(pose(cv::Rect(0, 0, 3, 3)));
+    // tvec.copyTo(pose(cv::Rect(3, 0, 1, 3)));
+
+    // cout << "相机坐标：" << endl
+    //      << "X: " << tvec.at<double>(0) << ", Y: " << tvec.at<double>(1) << ", Z: " << tvec.at<double>(2) << endl;
 }
 
 void ICPRegisterer::computePCLICP()
@@ -181,7 +288,7 @@ void ICPRegisterer::computePCLICP()
         for (size_t i = 0; i < correspondences.size(); ++i)
         {
             const auto &correspondence = correspondences[i];
-            cout << "点 " << correspondence.index_query << " 在 B 中的对应点索引：" << correspondence.index_match << endl;
+            cout << "点 " << correspondence.index_query << " 在 B 中的对应点索引：" << correspondence.index_match + 1 << endl;
         }
 
         // 提取匹配点对
@@ -206,20 +313,20 @@ void ICPRegisterer::computePCLICP()
         cv::Mat R;
         cv::Rodrigues(rvec, R);
 
-        // 打印旋转矩阵和平移向量
-        cout << "旋转矩阵：" << endl
-             << R << endl;
-        cout << "平移向量：" << endl
-             << tvec << endl;
+        // // 打印旋转矩阵和平移向量
+        // cout << "旋转矩阵：" << endl
+        //      << R << endl;
+        // cout << "平移向量：" << endl
+        //      << tvec << endl;
 
         // 构建位姿矩阵
         cv::Mat pose = cv::Mat::eye(4, 4, CV_64F);
         R.copyTo(pose(cv::Rect(0, 0, 3, 3)));
         tvec.copyTo(pose(cv::Rect(3, 0, 1, 3)));
 
-        // 打印位姿矩阵
-        cout << "位姿矩阵：" << endl
-             << pose << endl;
+        // // 打印位姿矩阵
+        // cout << "位姿矩阵：" << endl
+        //      << pose << endl;
 
         // 打印相机位置（即平移向量 tvec）
         cout << "相机坐标：" << endl

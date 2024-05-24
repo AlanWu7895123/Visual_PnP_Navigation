@@ -5,6 +5,7 @@ find_package(PCL REQUIRED)
 find_package(OpenCV 4 REQUIRED)
 find_package(Armadillo REQUIRED)
 find_package(mlpack REQUIRED)
+find_package(Eigen3 REQUIRED)
 
 include_directories(
 /usr/local/include/vtk-8.2
@@ -12,6 +13,7 @@ ${OPENCV_INCLUDE_DIRS}
 ${PCL_INCLUDE_DIRS}
 ${ARMADILLO_INCLUDE_DIRS}
 ${MLPACK_INCLUDE_DIRS}
+${EIGEN3_INCLUDE_DIRS}
 )
 
 link_directories(
