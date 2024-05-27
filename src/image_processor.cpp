@@ -46,11 +46,12 @@ void ImageProcessor::detectCircles()
     cvtColor(bw_image, output, COLOR_GRAY2BGR);
 
     ofstream out("../data/circles.txt", ios::out);
+    ofstream _out("../data/circles0.txt", ios::out);
     for (size_t i = 0; i < circles.size(); i++)
     {
         Point center(cvRound(circles[i][0]), cvRound(circles[i][1]));
-        // out << center.x << " " << center.y << endl;
-        // out << center.x * 430 / 150 << " " << -center.y * 430 / 150 << endl;
+        // _out << center.x << " " << center.y << endl;
+        _out << center.x * 430 / 150 << " " << center.y * 430 / 150 << endl;
         out << (center.x - image.cols / 2) * 430 / 150 << " " << -(center.y - image.rows / 2) * 430 / 150 << endl;
         int radius = cvRound(circles[i][2]);
 
@@ -65,6 +66,6 @@ void ImageProcessor::detectCircles()
 
 void ImageProcessor::saveResults()
 {
-    imwrite("../data/" + filename + "_contours_result.jpg", result);
+    // imwrite("../data/" + filename + "_contours_result.jpg", result);
     imwrite("../data/" + filename + "_hough_result.jpg", output);
 }

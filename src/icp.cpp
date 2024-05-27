@@ -29,7 +29,7 @@ double ICPAlgorithm::averageDistance(const vector<pair<double, double>> &A, cons
     return totalDistance / A.size();
 }
 
-int ICPAlgorithm::icp(const vector<pair<double, double>> &A, const vector<pair<double, double>> &B, vector<int> &correspondences)
+int ICPAlgorithm::icp(vector<pair<double, double>> &origin, const vector<pair<double, double>> &A, const vector<pair<double, double>> &B, vector<int> &correspondences)
 {
     correspondences.resize(A.size());
 
@@ -120,18 +120,43 @@ int ICPAlgorithm::icp(const vector<pair<double, double>> &A, const vector<pair<d
             correspondences[i] = minIndex;
         }
 
-        // cout << "迭代 " << iter + 1 << " 匹配结果：" << endl;
-        // for (size_t i = 0; i < transformedA.size(); ++i)
-        // {
-        //     cout << "A[" << i << "] -> B[" << correspondences[i] + 1 << "]" << endl;
-        // }
-
         double avgDist = averageDistance(transformedA, B, correspondences);
 
         if (abs(prevAvgDist - avgDist) < 0.001)
         {
-            cout << "平均距离：" << avgDist << endl;
-            if (avgDist > 200)
+            // cout << "match result" << endl;
+            // for (size_t i = 0; i < transformedA.size(); ++i)
+            // {
+            //     cout << "A[" << i << "] -> B[" << correspondences[i] + 1 << "]" << "--" << distance(transformedA[i], B[correspondences[i]]) << endl;
+            // }
+
+            // vector<pair<double, double>> newPointsN, newTransformedA;
+            // vector<int> newCorrespondences;
+
+            // for (size_t i = 0; i < transformedA.size(); ++i)
+            // {
+            //     if (distance(transformedA[i], B[correspondences[i]]) < 500)
+            //     {
+            //         newPointsN.push_back(origin[i]);
+            //         newTransformedA.push_back(transformedA[i]);
+            //         newCorrespondences.push_back(correspondences[i]);
+            //     }
+            // }
+            // origin = newPointsN;
+            // transformedA = newTransformedA;
+            // correspondences = newCorrespondences;
+
+            // cout << "final match result" << endl;
+            // for (size_t i = 0; i < transformedA.size(); ++i)
+            // {
+            //     cout << "A[" << i << "] -> B[" << correspondences[i] + 1 << "]" << "--" << distance(transformedA[i], B[correspondences[i]]) << endl;
+            // }
+
+            avgDist = averageDistance(transformedA, B, correspondences);
+
+            cout << "average distance:\n"
+                 << avgDist << endl;
+            if (avgDist > 300 || correspondences.size() < 4)
                 return 1;
             else
                 return 0;
@@ -231,6 +256,15 @@ cv::Mat ICPAlgorithm::estimateCameraPose(const vector<pair<double, double>> &poi
     // K.at<double>(1, 2) = 594; // c_y
 
     cv::Mat rvec, tvec;
+    std::vector<int> inliers;
+    bool useExtrinsicGuess = false;
+    int iterationsCount = 300;      // Increased iterations
+    float reprojectionError = 50.0; // Moderate reprojection error threshold
+    double confidence = 0.99;       // High confidence
+
+    // cv::solvePnPRansac(objectPoints, imagePoints, K, cv::Mat(), rvec, tvec, useExtrinsicGuess,
+    //                    iterationsCount, reprojectionError, confidence, inliers, cv::SOLVEPNP_EPNP);
+    // cv::solvePnP(objectPoints, imagePoints, K, cv::Mat(), rvec, tvec, false, cv::SOLVEPNP_EPNP);
     cv::solvePnP(objectPoints, imagePoints, K, cv::Mat(), rvec, tvec);
 
     cv::Mat R;
@@ -239,6 +273,31 @@ cv::Mat ICPAlgorithm::estimateCameraPose(const vector<pair<double, double>> &poi
     cv::Mat pose = cv::Mat::eye(4, 4, CV_64F);
     R.copyTo(pose(cv::Rect(0, 0, 3, 3)));
     tvec.copyTo(pose(cv::Rect(3, 0, 1, 3)));
+
+    cv::Mat pose_inv = pose.inv();
+    cv::Mat camera_position = pose_inv(cv::Rect(3, 0, 1, 3));
+
+    cout << "Camera Position in World Coordinates by EPnP: " << endl
+         << "X: " << camera_position.at<double>(0) << ", "
+         << "Y: " << camera_position.at<double>(1) << ", "
+         << "Z: " << camera_position.at<double>(2) << endl;
+
+    // cv::solvePnP(objectPoints, imagePoints, K, cv::Mat(), rvec, tvec, true, cv::SOLVEPNP_ITERATIVE);
+
+    // cv::Mat _R;
+    // cv::Rodrigues(rvec, _R);
+
+    // cv::Mat _pose = cv::Mat::eye(4, 4, CV_64F);
+    // _R.copyTo(_pose(cv::Rect(0, 0, 3, 3)));
+    // tvec.copyTo(_pose(cv::Rect(3, 0, 1, 3)));
+
+    // cv::Mat _pose_inv = _pose.inv();
+    // cv::Mat _camera_position = _pose_inv(cv::Rect(3, 0, 1, 3));
+
+    // cout << "Camera Position in World Coordinates by PnP: " << endl
+    //      << "X: " << _camera_position.at<double>(0) << ", "
+    //      << "Y: " << _camera_position.at<double>(1) << ", "
+    //      << "Z: " << _camera_position.at<double>(2) << endl;
 
     return pose.inv();
 }
