@@ -10,8 +10,9 @@ Camera::~Camera()
 bool Camera::open()
 {
     cap.open(cameraIndex);
-    // cap.set(cv::CAP_PROP_FOURCC, cv::VideoWriter::fourcc('Y', 'U', 'Y', 'V'));
-    // cap.set(cv::CAP_PROP_FOURCC, cv::VideoWriter::fourcc('M', 'J', 'P', 'G'));
+    cap.set(cv::CAP_PROP_FRAME_WIDTH, 2048);
+    cap.set(cv::CAP_PROP_FRAME_HEIGHT, 1536);
+    cap.set(cv::CAP_PROP_FOURCC, cv::VideoWriter::fourcc('M', 'J', 'P', 'G'));
     if (!cap.isOpened())
     {
         std::cerr << "Error: Could not open camera." << std::endl;
