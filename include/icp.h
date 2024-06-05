@@ -19,25 +19,26 @@ class ICPAlgorithm
 {
 public:
     ICPAlgorithm();
-    int icp(vector<pair<double, double>> &origin, const vector<pair<double, double>> &A,
-            const vector<pair<double, double>> &B, vector<int> &correspondences);
-    void calTransformed(const vector<pair<double, double>> &sourceCloud,
-                        const vector<pair<double, double>> &targetCloud,
-                        const vector<int> &correspondences,
-                        Matrix3d &rotationMatrix,
-                        Vector2d &translationVector);
-    void transformPointCloud(const vector<pair<double, double>> &points,
-                             const Matrix3d &rotationMatrix,
-                             const Vector2d &translationVector,
-                             vector<pair<double, double>> &transformedPoints);
-    void convertToPointCloud(const vector<pair<double, double>> &points, PointCloud::Ptr cloud, float z);
-    cv::Mat estimateCameraPose(const vector<pair<double, double>> &pointsN, const vector<pair<double, double>> &points37,
-                               const vector<int> &correspondences);
-    double distance(const pair<double, double> &p1, const pair<double, double> &p2);
+    ICPAlgorithm(vector<pair<double, double>> source, vector<pair<double, double>> target, Matrix3d R, Vector2d T);
+    int pclIcp();
+    void calTransformed();
+    vector<int> getCorrespondences();
+
+    // int icp(vector<pair<double, double>> &origin, const vector<pair<double, double>> &A,
+    //         const vector<pair<double, double>> &B, vector<int> &correspondences);
+    // double distance(const pair<double, double> &p1, const pair<double, double> &p2);
 
 private:
-    Vector2d computeCentroid(const vector<pair<double, double>> &points);
-    double averageDistance(const vector<pair<double, double>> &A, const vector<pair<double, double>> &B, const vector<int> &correspondences);
+    // Vector2d computeCentroid(const vector<pair<double, double>> &points);
+    // double averageDistance(const vector<pair<double, double>> &A, const vector<pair<double, double>> &B,
+    //                        const vector<int> &correspondences);
+
+    vector<pair<double, double>> source;
+    vector<pair<double, double>> target;
+    vector<pair<double, double>> transformed;
+    vector<int> correspondences;
+    Matrix3d R;
+    Vector2d T;
 };
 
 #endif // ICPALGORITHM_H

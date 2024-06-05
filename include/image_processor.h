@@ -9,27 +9,32 @@ class ImageProcessor
 {
 public:
     // Constructor
+    ImageProcessor();
     ImageProcessor(const std::string &filename);
     ImageProcessor(const cv::Mat &image);
 
     // Methods
     bool readImage();
     void convertToGray();
-    void applyThreshold();
+    void convertGrayToBinary();
     void findContours();
     void detectCircles();
     void saveResults();
 
-    cv::Mat output;
+    cv::Mat getDetectImg();
+    cv::Mat getContoursImg();
 
 private:
     std::string filename;
     cv::Mat image;
-    cv::Mat gray_image;
-    cv::Mat binary_image;
+    cv::Mat grayImg;
+    cv::Mat binaryImg;
+
+    cv::Mat contoursImg;
+    cv::Mat detectImg;
+
     std::vector<std::vector<cv::Point>> contours;
     std::vector<cv::Vec3f> circles;
-    cv::Mat result;
 };
 
 #endif // IMAGE_PROCESSOR_H
