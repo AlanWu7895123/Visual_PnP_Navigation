@@ -142,8 +142,11 @@ ostream &operator<<(ostream &os, State state)
     case State::FEATURE_DETECT:
         os << "FEATURE_DETECT";
         break;
-    case State::COORDINATE_CALCULATION:
-        os << "COORDINATE_CALCULATION";
+    case State::MATCHING:
+        os << "MATCHING";
+        break;
+    case State::MAPPING:
+        os << "MAPPING";
         break;
     case State::CAPUTRE_IMAGE_RUNNING:
         os << "CAPUTRE_IMAGE_RUNNING";
@@ -151,8 +154,11 @@ ostream &operator<<(ostream &os, State state)
     case State::FEATURE_DETECT_RUNNING:
         os << "FEATURE_DETECT_RUNNING";
         break;
-    case State::COORDINATE_CALCULATION_RUNNING:
-        os << "COORDINATE_CALCULATION_RUNNING";
+    case State::MATCHING_RUNNING:
+        os << "MATCHING_RUNNING";
+        break;
+    case State::MAPPING_RUNNING:
+        os << "MAPPING_RUNNING";
         break;
     case State::FINISHED:
         os << "FINISHED";

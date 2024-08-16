@@ -36,8 +36,8 @@ int ICPAlgorithm::pclIcp()
     pcl::IterativeClosestPoint<pcl::PointXYZ, pcl::PointXYZ> icp;
     icp.setInputSource(cloud_A);
     icp.setInputTarget(cloud_B);
-    icp.setMaxCorrespondenceDistance(180);
-    icp.setMaximumIterations(500);
+    // icp.setMaxCorrespondenceDistance(180);
+    icp.setMaximumIterations(50);
 
     pcl::PointCloud<pcl::PointXYZ> Final;
     icp.align(Final);
@@ -46,7 +46,7 @@ int ICPAlgorithm::pclIcp()
         std::cout << "ICP converged." << std::endl;
         std::cout << "The score is " << icp.getFitnessScore() << std::endl;
         Eigen::Matrix4f transformation = icp.getFinalTransformation();
-        // std::cout << "Final transformation matrix: \n"
+        // std::cout << "ICP final transformation matrix: \n"
         //           << transformation << std::endl;
 
         correspondences.clear();
@@ -69,7 +69,7 @@ int ICPAlgorithm::pclIcp()
     }
     else
     {
-        std::cout << "ICP did not converge." << std::endl;
+        std::cout << "ERROR: ICP did not converge." << std::endl;
         return 1;
     }
 }

@@ -5,7 +5,8 @@
 #include <opencv2/core/eigen.hpp>
 
 #include "camera.h"
-#include "image_processor.h"
+#include "filter.h"
+#include "detect.h"
 #include "icp.h"
 #include "pnp.h"
 #include "utils.h"
@@ -17,13 +18,16 @@ std::atomic<State> currentState(State::INIT);
 std::vector<std::thread> threads;
 Camera camera;
 cv::Mat buffer;
-std::deque<std::pair<double, double>> window;
-std::pair<double, double> avg_position;
+
 const size_t windowSize = 10;
 std::vector<double> weights = {1, 1, 1, 1, 1, 2, 2, 2, 2, 3};
+CameraPositionFilter filter(windowSize, weights);
+
+vector<pair<double, double>> pointsN;
+std::vector<std::pair<double, double>> points37;
+vector<int> correspondences;
 Matrix3d rotationMatrix = Matrix3d::Identity();
 Vector2d translationVector = Vector2d::Zero();
-std::vector<std::pair<double, double>> points37;
 ofstream out("../data/trajectory.txt", ios::out);
 
 void initThread()
@@ -70,12 +74,11 @@ void featureDetectThread()
     processor.convertGrayToBinary();
     processor.findContours();
     processor.detectCircles();
-    currentState = State::COORDINATE_CALCULATION;
+    currentState = State::MATCHING;
 }
 
-void coordinateCalculationThread()
+void matchingThread()
 {
-    vector<pair<double, double>> pointsN;
 
     pointsN = readNPoints("../data/circles.txt");
     if (pointsN.size() > points37.size())
@@ -87,15 +90,11 @@ void coordinateCalculationThread()
 
     ICPAlgorithm icpAlg(pointsN, points37, rotationMatrix, translationVector);
     icpAlg.calTransformed();
-    int errorFlag = icpAlg.pclIcp();
-    vector<int> correspondences = icpAlg.getCorrespondences();
+    int icpFlag = icpAlg.pclIcp();
 
-    if (errorFlag == 1)
+    if (icpFlag == 0)
     {
-        cerr << "ERROR: Error Matching." << endl;
-    }
-    else
-    {
+        correspondences = icpAlg.getCorrespondences();
         cv::Mat img = buffer.clone();
         for (int i = 0; i < pointsN.size(); i++)
         {
@@ -108,45 +107,35 @@ void coordinateCalculationThread()
         }
         imshow("final match result", img);
         waitKey(1);
+        currentState = State::MAPPING;
+    }
+    else
+    {
+        currentState = State::CAPUTRE_IMAGE;
+    }
+}
 
-        PNPAlgorithm pnpAlg(pointsN, points37, correspondences);
-        pnpAlg.estimateCameraPose();
-        cv::Mat pose_inv = pnpAlg.getPose();
+void mappingThread()
+{
+    PNPAlgorithm pnpAlg(pointsN, points37, correspondences);
+    pnpAlg.estimateCameraPose();
+    cv::Mat pose_inv = pnpAlg.getPose();
 
-        cv::Mat camera_position = pose_inv(cv::Rect(3, 0, 1, 3));
+    cv::Mat camera_position = pose_inv(cv::Rect(3, 0, 1, 3));
 
-        // average filter
-        window.push_back({camera_position.at<double>(0), camera_position.at<double>(1)});
-        if (window.size() > windowSize)
-        {
-            if (distance(avg_position, window[windowSize]) > 1000)
-            {
-                std::cout << "ERROR: The new point is so far..." << std::endl;
-                window.pop_back();
-                currentState = State::CAPUTRE_IMAGE;
-                return;
-            }
-            else
-            {
-                cout << "rotationMatrix=" << rotationMatrix << endl;
-                cout << "translationVector=" << translationVector << endl;
-                rotationMatrix = getRotationMatrix(pose_inv);
-                translationVector = getTranslationVector(pose_inv);
-                window.pop_front();
-            }
-        }
-        if (window.size() == windowSize)
-        {
-            pair<double, double> filteredPoint = weightedMovingAverageFilter(window, weights);
-            avg_position = filteredPoint;
-            std::cout << "Filtered coordinates: (" << filteredPoint.first << ", " << filteredPoint.second << ")" << std::endl;
-            out << filteredPoint.first
-                << " " << filteredPoint.second << endl;
-        }
-        else
-        {
-            std::cout << "Insufficient data for filtering. Waiting for more points..." << std::endl;
-        }
+    int pnpFlag = filter.addPosition({camera_position.at<double>(0), camera_position.at<double>(1)});
+    if (pnpFlag == 0)
+    {
+        pair<double, double> pose = filter.getPose();
+
+        rotationMatrix = getRotationMatrix(pose_inv);
+        translationVector = getTranslationVector(pose_inv);
+        cout << "----new rotationMatrix----" << endl;
+        cout << rotationMatrix << endl;
+        cout << "----new translationMatrix----" << endl;
+        cout << translationVector << endl;
+
+        out << pose.first + 1024 << " " << pose.second + 768 << endl;
     }
     currentState = State::CAPUTRE_IMAGE;
 }
@@ -289,24 +278,24 @@ int main()
         switch (currentState.load())
         {
         case State::INIT:
-            std::cout << "Initial state." << std::endl;
             threads.emplace_back(initThread);
             currentState = State::CAPUTRE_IMAGE;
             break;
         case State::CAPUTRE_IMAGE:
-            std::cout << "Launching Capture Image." << std::endl;
             threads.emplace_back(captureImageThread);
             currentState = State::CAPUTRE_IMAGE_RUNNING;
             break;
         case State::FEATURE_DETECT:
-            std::cout << "Launching Feature Detect." << std::endl;
             threads.emplace_back(featureDetectThread);
             currentState = State::FEATURE_DETECT_RUNNING;
             break;
-        case State::COORDINATE_CALCULATION:
-            std::cout << "Launching Coordinate Calculation." << std::endl;
-            threads.emplace_back(coordinateCalculationThread);
-            currentState = State::COORDINATE_CALCULATION_RUNNING;
+        case State::MATCHING:
+            threads.emplace_back(matchingThread);
+            currentState = State::MATCHING_RUNNING;
+            break;
+        case State::MAPPING:
+            threads.emplace_back(mappingThread);
+            currentState = State::MAPPING_RUNNING;
             break;
         case State::TEST:
             threads.emplace_back(testThread);

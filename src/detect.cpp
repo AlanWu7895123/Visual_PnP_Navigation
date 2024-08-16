@@ -1,4 +1,4 @@
-#include "image_processor.h"
+#include "detect.h"
 
 using namespace cv;
 using namespace std;
@@ -66,7 +66,8 @@ void ImageProcessor::detectCircles()
 
 void ImageProcessor::saveResults()
 {
-    // imwrite("../data/" + filename + "_contours_result.jpg", contoursImg);
+    imwrite("../data/" + filename + "_binary_result.jpg", binaryImg);
+    imwrite("../data/" + filename + "_contours_result.jpg", contoursImg);
     imwrite("../data/" + filename + "_hough_result.jpg", detectImg);
 }
 
