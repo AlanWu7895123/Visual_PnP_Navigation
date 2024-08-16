@@ -10,6 +10,7 @@
 #include "icp.h"
 #include "pnp.h"
 #include "utils.h"
+#include "network_camera.h"
 
 using namespace pcl;
 using namespace cv;
@@ -17,6 +18,8 @@ using namespace cv;
 std::atomic<State> currentState(State::INIT);
 std::vector<std::thread> threads;
 Camera camera;
+NetworkCamera networkCamera;
+std::string url = "";
 cv::Mat buffer;
 
 const size_t windowSize = 10;
@@ -32,7 +35,8 @@ ofstream out("../data/trajectory.txt", ios::out);
 
 void initThread()
 {
-    if (!camera.open())
+    networkCamera.setUrl(url);
+    if (!networkCamera.open())
     {
         currentState = State::FINISHED;
     }
@@ -47,14 +51,14 @@ void initThread()
 
 void finishThread()
 {
-    camera.close();
+    networkCamera.close();
 }
 
 void captureImageThread()
 {
     cv::namedWindow("Camera", cv::WINDOW_AUTOSIZE);
     cv::Mat frame;
-    if (!camera.getFrame(frame))
+    if (!networkCamera.getFrame(frame))
     {
         cout << "get camera image failed" << endl;
         currentState = State::CAPUTRE_IMAGE;
