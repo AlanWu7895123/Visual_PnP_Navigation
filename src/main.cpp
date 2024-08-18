@@ -11,27 +11,14 @@
 #include "pnp.h"
 #include "utils.h"
 #include "network_camera.h"
+#include "json.hpp"
+#include "controller.h"
+#include "agv.h"
+#include "constant.h"
 
 using namespace pcl;
 using namespace cv;
-
-std::atomic<State> currentState(State::INIT);
-std::vector<std::thread> threads;
-Camera camera;
-NetworkCamera networkCamera;
-std::string url = "";
-cv::Mat buffer;
-
-const size_t windowSize = 10;
-std::vector<double> weights = {1, 1, 1, 1, 1, 2, 2, 2, 2, 3};
-CameraPositionFilter filter(windowSize, weights);
-
-vector<pair<double, double>> pointsN;
-std::vector<std::pair<double, double>> points37;
-vector<int> correspondences;
-Matrix3d rotationMatrix = Matrix3d::Identity();
-Vector2d translationVector = Vector2d::Zero();
-ofstream out("../data/trajectory.txt", ios::out);
+using namespace std;
 
 void initThread()
 {
@@ -47,6 +34,8 @@ void initThread()
             -768;
         currentState = State::CAPUTRE_IMAGE;
     }
+    agv.setPermission();
+    targetPose = {1000, 1000};
 }
 
 void finishThread()
@@ -104,7 +93,8 @@ void matchingThread()
         {
             Point center(cvRound(pointsN[i].first), cvRound(pointsN[i].second));
             circle(img, center, 3, Scalar(0, 255, 0), -1, LINE_AA);
-            string center_text = "No." + to_string(correspondences[i] + 1) + " " + to_string(center.x) + "," + to_string(center.y);
+            string center_text = "No." + to_string(correspondences[i] + 1) + " " + to_string(center.x) + "," +
+                                 to_string(center.y);
             Point text_position(center.x - 55, center.y - 55);
             putText(img, center_text, text_position, FONT_HERSHEY_SIMPLEX, 1, Scalar(255, 255, 0), 1, LINE_AA);
             circle(img, center, 45, Scalar(0, 0, 255), 3, LINE_AA);
@@ -127,10 +117,10 @@ void mappingThread()
 
     cv::Mat camera_position = pose_inv(cv::Rect(3, 0, 1, 3));
 
-    int pnpFlag = filter.addPosition({camera_position.at<double>(0), camera_position.at<double>(1)});
-    if (pnpFlag == 0)
+    int filterFlag = filter.addPosition({camera_position.at<double>(0), camera_position.at<double>(1)});
+    if (filterFlag == 0)
     {
-        pair<double, double> pose = filter.getPose();
+        currentPose = filter.getPose();
 
         rotationMatrix = getRotationMatrix(pose_inv);
         translationVector = getTranslationVector(pose_inv);
@@ -139,8 +129,52 @@ void mappingThread()
         cout << "----new translationMatrix----" << endl;
         cout << translationVector << endl;
 
-        out << pose.first + 1024 << " " << pose.second + 768 << endl;
+        out << currentPose.first + 1024 << " " << currentPose.second + 768 << endl;
+        currentState = State::MOVING;
     }
+    else
+    {
+        currentState = State::CAPUTRE_IMAGE;
+    }
+}
+
+void movingThread()
+{
+    nlohmann::json responseJson = agv.getState();
+    if (responseJson["vx"] == 0 && responseJson["vy"] == 0 && responseJson["w"] == 0 &&
+        currentPose != pair<double, double>{9999, 9999})
+    {
+        double xDist = targetPose.first - currentPose.first;
+        double yDist = targetPose.second - currentPose.second;
+
+        if (targetPose.first > targetPose.second && currentAGVToward == AGVToward::VERTICAL)
+        {
+            agv.rotate(M_PI / 4, 0.2);
+            currentAGVToward = AGVToward::HORIZONTAL;
+        }
+        else if (targetPose.first < targetPose.second && currentAGVToward == AGVToward::HORIZONTAL)
+        {
+            agv.rotate(M_PI / 4, -0.2);
+            currentAGVToward = AGVToward::VERTICAL;
+        }
+        else if (abs(xDist) > 50 || abs(yDist) > 50)
+        {
+            int forward = 1;
+            if (currentAGVToward == AGVToward::HORIZONTAL)
+            {
+                if (yDist < 0)
+                    forward = -1;
+                agv.move(yDist, 0.2 * forward, 0);
+            }
+            else if (currentAGVToward == AGVToward::VERTICAL)
+            {
+                if (xDist < 0)
+                    forward = -1;
+                agv.move(xDist, 0.2 * forward, 0);
+            }
+        }
+    }
+
     currentState = State::CAPUTRE_IMAGE;
 }
 
@@ -197,7 +231,8 @@ void testThread()
     {
         Point center(cvRound(pointsN[i].first), cvRound(pointsN[i].second));
         circle(img, center, 3, Scalar(0, 255, 0), -1, LINE_AA);
-        string center_text = "No." + to_string(correspondences[i] + 1) + " " + to_string(center.x) + "," + to_string(center.y);
+        string center_text = "No." + to_string(correspondences[i] + 1) + " " + to_string(center.x) + "," +
+                             to_string(center.y);
         Point text_position(center.x - 55, center.y - 55);
         putText(img, center_text, text_position, FONT_HERSHEY_SIMPLEX, 0.8, Scalar(255, 255, 0), 1, LINE_AA);
         circle(img, center, 45, Scalar(0, 0, 255), 3, LINE_AA);
@@ -300,6 +335,10 @@ int main()
         case State::MAPPING:
             threads.emplace_back(mappingThread);
             currentState = State::MAPPING_RUNNING;
+            break;
+        case State::MOVING:
+            threads.emplace_back(movingThread);
+            currentState = State::MOVING_RUNNING;
             break;
         case State::TEST:
             threads.emplace_back(testThread);

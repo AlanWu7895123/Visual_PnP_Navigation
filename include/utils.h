@@ -14,6 +14,8 @@
 #include <fcntl.h>
 #include <eigen3/Eigen/Dense>
 #include <opencv2/opencv.hpp>
+#include <arpa/inet.h>
+#include <netinet/in.h>
 
 #include "struct.h"
 
@@ -44,5 +46,17 @@ void calTransformed(const vector<pair<double, double>> &sourceCloud,
                     const vector<int> &correspondences,
                     Matrix3d &rotationMatrix,
                     Vector2d &translationVector);
+
+std::vector<unsigned char> hexArrayToBytes(const char *hexArray);
+
+std::string bytesToHex(const char *data, size_t len);
+
+ProtocolHeader deSerializeProtocolHeader(const char *data);
+
+std::string serializeProtocolHeader(const ProtocolHeader &header);
+
+char *stringToHex(const std::string &input);
+
+char *concatStrings(const char *str1, const char *str2);
 
 #endif // UTILS_H

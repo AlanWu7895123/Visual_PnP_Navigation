@@ -234,3 +234,179 @@ void calTransformed(const vector<pair<double, double>> &sourceCloud,
 
     translationVector = t;
 }
+
+std::vector<unsigned char> hexArrayToBytes(const char *hexArray)
+{
+    std::vector<unsigned char> bytes;
+
+    size_t len = strlen(hexArray);
+    if (len % 2 != 0)
+    {
+        throw std::invalid_argument("Hex array length must be even");
+    }
+
+    for (size_t i = 0; i < len; i += 2)
+    {
+        unsigned char byte = 0;
+        if (hexArray[i] >= '0' && hexArray[i] <= '9')
+        {
+            byte = (hexArray[i] - '0') << 4;
+        }
+        else if (hexArray[i] >= 'A' && hexArray[i] <= 'F')
+        {
+            byte = (hexArray[i] - 'A' + 10) << 4;
+        }
+        else if (hexArray[i] >= 'a' && hexArray[i] <= 'f')
+        {
+            byte = (hexArray[i] - 'a' + 10) << 4;
+        }
+        else
+        {
+            throw std::invalid_argument("Invalid hex character");
+        }
+
+        if (hexArray[i + 1] >= '0' && hexArray[i + 1] <= '9')
+        {
+            byte |= (hexArray[i + 1] - '0');
+        }
+        else if (hexArray[i + 1] >= 'A' && hexArray[i + 1] <= 'F')
+        {
+            byte |= (hexArray[i + 1] - 'A' + 10);
+        }
+        else if (hexArray[i + 1] >= 'a' && hexArray[i + 1] <= 'f')
+        {
+            byte |= (hexArray[i + 1] - 'a' + 10);
+        }
+        else
+        {
+            throw std::invalid_argument("Invalid hex character");
+        }
+
+        bytes.push_back(byte);
+    }
+
+    return bytes;
+}
+
+std::string bytesToHex(const char *data, size_t len)
+{
+    std::ostringstream oss;
+    for (size_t i = 0; i < len; ++i)
+    {
+        oss << std::hex << std::setw(2) << std::setfill('0') << (static_cast<int>(data[i]) & 0xff);
+    }
+    return oss.str();
+}
+
+ProtocolHeader deSerializeProtocolHeader(const char *data)
+{
+    ProtocolHeader header;
+    size_t offset = 0;
+
+    // Extract m_sync (1 byte)
+    header.m_sync = static_cast<uint8_t>(data[offset]);
+    offset += 1;
+
+    // Extract m_version (1 byte)
+    header.m_version = static_cast<uint8_t>(data[offset]);
+    offset += 1;
+
+    // Extract and convert m_number (2 bytes, big-endian to host-endian)
+    uint16_t number_be;
+    memcpy(&number_be, data + offset, sizeof(number_be));
+    header.m_number = ntohs(number_be);
+    offset += sizeof(number_be);
+
+    // Extract and convert m_length (4 bytes, big-endian to host-endian)
+    uint32_t length_be;
+    memcpy(&length_be, data + offset, sizeof(length_be));
+    header.m_length = ntohl(length_be);
+    offset += sizeof(length_be);
+
+    // Extract and convert m_type (2 bytes, big-endian to host-endian)
+    uint16_t type_be;
+    memcpy(&type_be, data + offset, sizeof(type_be));
+    header.m_type = ntohs(type_be);
+    offset += sizeof(type_be);
+
+    // Extract m_reserved (6 bytes)
+    memcpy(header.m_reserved, data + offset, sizeof(header.m_reserved));
+    offset += sizeof(header.m_reserved);
+
+    return header;
+}
+
+std::string serializeProtocolHeader(const ProtocolHeader &header)
+{
+    std::string serialized;
+
+    // Add m_sync and m_version (1 byte each, no conversion needed)
+    serialized.append(1, header.m_sync);
+    serialized.append(1, header.m_version);
+
+    // Convert m_number to big-endian and add to serialized string
+    uint16_t number_be = htons(header.m_number);
+    serialized.append(reinterpret_cast<const char *>(&number_be), sizeof(number_be));
+
+    // Convert m_length to big-endian and add to serialized string
+    uint32_t length_be = htonl(header.m_length);
+    serialized.append(reinterpret_cast<const char *>(&length_be), sizeof(length_be));
+
+    // Convert m_type to big-endian and add to serialized string
+    uint16_t type_be = htons(header.m_type);
+    serialized.append(reinterpret_cast<const char *>(&type_be), sizeof(type_be));
+
+    // Add m_reserved (10 bytes, no conversion needed)
+    serialized.append(reinterpret_cast<const char *>(header.m_reserved), sizeof(header.m_reserved));
+
+    return serialized;
+}
+
+char *protocolHeaderToHexChar(const ProtocolHeader &header)
+{
+    std::stringstream ss;
+    ss << std::hex << std::setfill('0');
+    ss << std::setw(2) << static_cast<int>(header.m_sync);
+    ss << std::setw(2) << static_cast<int>(header.m_version);
+    ss << std::setw(2) << static_cast<int>((header.m_number >> 8) & 0xFF);
+    ss << std::setw(2) << static_cast<int>(header.m_number & 0xFF);
+    ss << std::setw(2) << static_cast<int>((header.m_length >> 24) & 0xFF);
+    ss << std::setw(2) << static_cast<int>((header.m_length >> 16) & 0xFF);
+    ss << std::setw(2) << static_cast<int>((header.m_length >> 8) & 0xFF);
+    ss << std::setw(2) << static_cast<int>(header.m_length & 0xFF);
+    ss << std::setw(2) << static_cast<int>((header.m_type >> 8) & 0xFF);
+    ss << std::setw(2) << static_cast<int>(header.m_type & 0xFF);
+    for (size_t i = 0; i < sizeof(header.m_reserved); ++i)
+    {
+        ss << std::setw(2) << static_cast<int>(header.m_reserved[i]);
+    }
+    std::string hexStr = ss.str();
+    char *hexChar = new char[hexStr.length() + 1];
+    std::strcpy(hexChar, hexStr.c_str());
+    return hexChar;
+}
+
+char *stringToHex(const std::string &input)
+{
+    static const char *const lut = "0123456789ABCDEF";
+    size_t len = input.length();
+    char *output = new char[2 * len + 1];
+    for (size_t i = 0; i < len; ++i)
+    {
+        const unsigned char c = input[i];
+        output[2 * i] = lut[c >> 4];
+        output[2 * i + 1] = lut[c & 15];
+    }
+    output[2 * len] = '\0';
+    return output;
+}
+
+char *concatStrings(const char *str1, const char *str2)
+{
+    size_t len1 = strlen(str1);
+    size_t len2 = strlen(str2);
+    char *result = new char[len1 + len2 + 1];
+    strcpy(result, str1);
+    strcat(result, str2);
+    return result;
+}
