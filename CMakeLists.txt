@@ -7,12 +7,11 @@ find_package(Armadillo REQUIRED)
 # find_package(mlpack REQUIRED)
 find_package(Eigen3 REQUIRED)
 
-SET(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++11 -pthread")
+set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++11 -pthread")
 set(CMAKE_CXX_STANDARD 14)
 
 include_directories(
 /usr/local/include/vtk-8.2
-# /usr/include/mlpack
 ${OPENCV_INCLUDE_DIRS}
 ${PCL_INCLUDE_DIRS}
 ${ARMADILLO_INCLUDE_DIRS}
