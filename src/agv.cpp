@@ -15,11 +15,14 @@ nlohmann::json AGV::sendToAGV(Controller &controller, uint16_t type, std::string
     ProtocolHeader header;
     header.m_sync = 0x5A;
     header.m_version = 0x01;
-    header.m_number = htons(1); // Network byte order
+    // header.m_number = htons(1); // Network byte order
+    header.m_number = 1;
     memset(header.m_reserved, 0, sizeof(header.m_reserved));
 
-    header.m_type = htons(type);              // Network byte order
-    header.m_length = htonl(jsonData.size()); // Network byte order
+    // header.m_type = htons(type);              // Network byte order
+    // header.m_length = htonl(jsonData.size()); // Network byte order
+    header.m_type = type;
+    header.m_length = jsonData.size();
 
     if (!controller.sendData(header, jsonData))
     {
@@ -37,9 +40,8 @@ nlohmann::json AGV::sendToAGV(Controller &controller, uint16_t type, std::string
         return nullptr;
     }
 
-    nlohmann::json json = nlohmann::json::parse(responseJsonData);
     controller.cleanup();
-    return json;
+    return nlohmann::json::parse(responseJsonData);
 }
 
 nlohmann::json AGV::move(double dist, double vx, double vy)
