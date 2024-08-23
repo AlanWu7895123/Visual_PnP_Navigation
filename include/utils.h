@@ -23,7 +23,7 @@ using namespace Eigen;
 using namespace std;
 using namespace cv;
 
-vector<pair<double, double>> read37Points(string filename);
+vector<pair<double, double>> readMapPoinits(string filename);
 
 vector<pair<double, double>> readNPoints(string filename);
 
@@ -59,4 +59,13 @@ char *stringToHex(const std::string &input);
 
 char *concatStrings(const char *str1, const char *str2);
 
+std::string trim(const std::string &str);
+
+std::unordered_map<std::string, std::string> readConfig(const std::string &filename);
+
+bool readCameraParameters(const std::string &filename, cv::Mat &cameraMatrix, cv::Mat &distCoeffs);
+
+double angleToYAxis(double x, double y);
+
+double calculateAngle(pair<double, double> x, pair<double, double> y, pair<double, double> z);
 #endif // UTILS_H

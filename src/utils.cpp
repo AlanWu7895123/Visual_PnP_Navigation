@@ -1,15 +1,15 @@
 #include "utils.h"
 
-vector<pair<double, double>> read37Points(string filename)
+vector<pair<double, double>> readMapPoinits(string filename)
 {
     cout << "read 37 points" << endl;
-    vector<pair<double, double>> points37;
+    vector<pair<double, double>> targetPoints;
     ifstream file(filename);
 
     if (!file.is_open())
     {
         cerr << "Error: Unable to open the file." << endl;
-        return points37;
+        return targetPoints;
     }
 
     string line;
@@ -31,24 +31,24 @@ vector<pair<double, double>> read37Points(string filename)
 
         // cout << "Read numbers: " << numbers[0] << ", " << numbers[1] << ", " << numbers[2] << endl;
         pair<double, double> tmp = {numbers[1], numbers[2]};
-        points37.push_back(tmp);
+        targetPoints.push_back(tmp);
     }
 
     file.close();
-    return points37;
+    return targetPoints;
 }
 
 vector<pair<double, double>> readNPoints(string filename)
 {
     cout << "read N points" << endl;
-    vector<pair<double, double>> pointsN;
+    vector<pair<double, double>> sourcePoints;
     ifstream file(filename);
 
     // 检查文件是否成功打开
     if (!file.is_open())
     {
         cerr << "Error: Unable to open the file." << endl;
-        return pointsN;
+        return sourcePoints;
     }
 
     string line;
@@ -72,12 +72,12 @@ vector<pair<double, double>> readNPoints(string filename)
         // cout << "Read numbers: " << i << ", " << numbers[0] << ", " << numbers[1] << endl;
         i++;
         pair<double, double> tmp = {numbers[0], numbers[1]};
-        pointsN.push_back(tmp);
+        sourcePoints.push_back(tmp);
     }
 
     // 关闭文件
     file.close();
-    return pointsN;
+    return sourcePoints;
 }
 
 int kbhit()
@@ -409,4 +409,107 @@ char *concatStrings(const char *str1, const char *str2)
     strcpy(result, str1);
     strcat(result, str2);
     return result;
+}
+
+std::string trim(const std::string &str)
+{
+    size_t first = str.find_first_not_of(' ');
+    size_t last = str.find_last_not_of(' ');
+    return (first == std::string::npos || last == std::string::npos) ? "" : str.substr(first, last - first + 1);
+}
+
+std::unordered_map<std::string, std::string> readConfig(const std::string &filename)
+{
+    std::unordered_map<std::string, std::string> config;
+    std::ifstream file(filename);
+
+    if (!file.is_open())
+    {
+        std::cerr << "Unable to open config file: " << filename << std::endl;
+        return config;
+    }
+
+    std::string line;
+    while (std::getline(file, line))
+    {
+        // 忽略注释行和空行
+        if (line.empty() || line[0] == '#')
+        {
+            continue;
+        }
+
+        size_t delimiterPos = line.find('=');
+        if (delimiterPos != std::string::npos)
+        {
+            std::string key = trim(line.substr(0, delimiterPos));
+            std::string value = trim(line.substr(delimiterPos + 1));
+            config[key] = value;
+        }
+    }
+
+    file.close();
+    return config;
+}
+
+bool readCameraParameters(const std::string &filename, cv::Mat &cameraMatrix, cv::Mat &distCoeffs)
+{
+    // 打开配置文件
+    cv::FileStorage fs(filename, cv::FileStorage::READ);
+    if (!fs.isOpened())
+    {
+        std::cerr << "Failed to open " << filename << std::endl;
+        return false;
+    }
+
+    // 读取内参和畸变参数
+    fs["camera_matrix"] >> cameraMatrix;
+    fs["dist_coeffs"] >> distCoeffs;
+
+    // 关闭文件
+    fs.release();
+
+    return true;
+}
+
+double angleToYAxis(double x, double y)
+{
+    return std::atan2(y, x) * 180.0 / M_PI;
+}
+
+double calculateAngle(pair<double, double> x, pair<double, double> y, pair<double, double> z)
+{
+    // 计算矢量XY和XZ
+    double xy1 = y.first - x.first;
+    double xy2 = y.second - x.second;
+    double xz1 = z.first - x.first;
+    double xz2 = z.second - x.second;
+
+    // 计算角度α和β（矢量到Y轴的夹角）
+    double alpha = angleToYAxis(xy1, xy2);
+    double beta = angleToYAxis(xz1, xz2);
+
+    // 计算矢量XY和XZ的夹角θ
+    double dotProduct = xy1 * xz1 + xy2 * xz2;
+    double magnitudeXY = std::sqrt(xy1 * xy1 + xy2 * xy2);
+    double magnitudeXZ = std::sqrt(xz1 * xz1 + xz2 * xz2);
+    double theta = std::acos(dotProduct / (magnitudeXY * magnitudeXZ)) * 180.0 / M_PI;
+
+    // 判断旋转方向并且避免经过Y轴
+    double crossProduct = xy1 * xz2 - xy2 * xz1;
+    if (crossProduct < 0)
+    { // 顺时针旋转
+        if (beta < alpha)
+        {
+            theta = 360.0 - theta; // 避免经过Y轴
+        }
+    }
+    else
+    { // 逆时针旋转
+        if (beta > alpha)
+        {
+            theta = -(360.0 - theta); // 避免经过Y轴
+        }
+    }
+
+    return theta;
 }

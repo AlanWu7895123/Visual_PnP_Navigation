@@ -10,6 +10,9 @@
 #include <pcl/point_cloud.h>
 #include <pcl/point_types.h>
 
+// #include "utils.h"
+// #include "constant.h"
+
 using namespace std;
 using namespace Eigen;
 using PointT = pcl::PointXYZ;
@@ -24,12 +27,14 @@ public:
     void convertToPointCloud(const vector<pair<double, double>> &points, PointCloud::Ptr &cloud, float z);
     void estimateCameraPose();
     cv::Mat getPose();
+    void setCameraConfig(cv::Mat cameraMatrix, cv::Mat distCoeffs);
 
 private:
     std::vector<std::pair<double, double>> source;
     std::vector<std::pair<double, double>> target;
     vector<int> correspondences;
     cv::Mat pose;
+    cv::Mat cameraMatrix, distCoeffs;
 };
 
 #endif // PNPALGORITHM_H

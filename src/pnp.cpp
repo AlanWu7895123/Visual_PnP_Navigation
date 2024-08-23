@@ -1,6 +1,4 @@
 #include "pnp.h"
-#include <pcl/point_types.h>
-#include <pcl/point_cloud.h>
 #include <pcl/registration/icp.h>
 
 PNPAlgorithm::PNPAlgorithm() {}
@@ -27,7 +25,7 @@ void PNPAlgorithm::estimateCameraPose()
     PointCloud::Ptr cloudA(new PointCloud);
     PointCloud::Ptr cloudB(new PointCloud);
     convertToPointCloud(source, cloudA, 0);
-    convertToPointCloud(target, cloudB, 1800);
+    convertToPointCloud(target, cloudB, 0);
 
     vector<cv::Point3f> objectPoints;
     vector<cv::Point2f> imagePoints;
@@ -47,6 +45,10 @@ void PNPAlgorithm::estimateCameraPose()
     float reprojectionError = 50.0; // Moderate reprojection error threshold
     double confidence = 0.99;       // High confidence
 
+    // // 打印读取到的参数
+    // std::cout << "Camera Matrix: " << cameraMatrix << std::endl;
+    // std::cout << "Distortion Coefficients: " << distCoeffs << std::endl;
+
     cv::solvePnPRansac(objectPoints, imagePoints, K, cv::Mat(), rvec, tvec, useExtrinsicGuess,
                        iterationsCount, reprojectionError, confidence, inliers, cv::SOLVEPNP_ITERATIVE);
     cv::Mat R;
@@ -59,4 +61,11 @@ void PNPAlgorithm::estimateCameraPose()
 cv::Mat PNPAlgorithm::getPose()
 {
     return pose.inv();
+}
+
+void PNPAlgorithm::setCameraConfig(cv::Mat myCameraMatrix, cv::Mat myDistCoeffs)
+{
+    cameraMatrix = myCameraMatrix;
+    distCoeffs = myDistCoeffs;
+    return;
 }

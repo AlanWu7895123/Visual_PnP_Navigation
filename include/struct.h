@@ -3,6 +3,7 @@
 enum class State
 {
     INIT,
+    INIT_RUNNING,
     TEST,
     TEST_RUNNING,
     CAPUTRE_IMAGE,
@@ -18,10 +19,12 @@ enum class State
     FINISHED
 };
 
-enum class AGVToward
+enum class AGVMoveStep
 {
-    VERTICAL,
-    HORIZONTAL
+    WAITINGFORTARGET,
+    ROTATE,
+    FORWARD,
+    BACK
 };
 
 struct AGVTranslation

@@ -88,6 +88,27 @@ nlohmann::json AGV::getState()
     return responseJson;
 }
 
+nlohmann::json AGV::getSpeed()
+{
+    string jsonData = "";
+    nlohmann::json responseJson = sendToAGV(stateController, 1005, jsonData);
+    return responseJson;
+}
+
+nlohmann::json AGV::getIfBlocked()
+{
+    string jsonData = "";
+    nlohmann::json responseJson = sendToAGV(stateController, 1006, jsonData);
+    return responseJson;
+}
+
+nlohmann::json AGV::getIMU()
+{
+    string jsonData = "";
+    nlohmann::json responseJson = sendToAGV(stateController, 1014, jsonData);
+    return responseJson;
+}
+
 nlohmann::json AGV::setPermission()
 {
     nlohmann::json jConfig;

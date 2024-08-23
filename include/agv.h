@@ -13,6 +13,9 @@ public:
     nlohmann::json move(double dist, double vx, double vy);
     nlohmann::json rotate(double angle, double vw);
     nlohmann::json getState();
+    nlohmann::json getSpeed();
+    nlohmann::json getIMU();
+    nlohmann::json getIfBlocked();
     nlohmann::json setPermission();
 
 private:
