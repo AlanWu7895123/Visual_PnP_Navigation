@@ -74,6 +74,7 @@ vector<pair<double, double>> readNPoints(string filename)
         pair<double, double> tmp = {numbers[0], numbers[1]};
         sourcePoints.push_back(tmp);
     }
+    cout << "close file success" << endl;
 
     // 关闭文件
     file.close();
@@ -478,38 +479,35 @@ double angleToYAxis(double x, double y)
 
 double calculateAngle(pair<double, double> x, pair<double, double> y, pair<double, double> z)
 {
-    // 计算矢量XY和XZ
-    double xy1 = y.first - x.first;
-    double xy2 = y.second - x.second;
-    double xz1 = z.first - x.first;
-    double xz2 = z.second - x.second;
+    // 向量XY
+    double xy_x = y.first - x.first;
+    double xy_y = y.second - x.second;
 
-    // 计算角度α和β（矢量到Y轴的夹角）
-    double alpha = angleToYAxis(xy1, xy2);
-    double beta = angleToYAxis(xz1, xz2);
+    // 向量XZ
+    double xz_x = z.first - x.first;
+    double xz_y = z.second - x.second;
 
-    // 计算矢量XY和XZ的夹角θ
-    double dotProduct = xy1 * xz1 + xy2 * xz2;
-    double magnitudeXY = std::sqrt(xy1 * xy1 + xy2 * xy2);
-    double magnitudeXZ = std::sqrt(xz1 * xz1 + xz2 * xz2);
-    double theta = std::acos(dotProduct / (magnitudeXY * magnitudeXZ)) * 180.0 / M_PI;
+    // 点积
+    double dotProduct = xy_x * xz_x + xy_y * xz_y;
 
-    // 判断旋转方向并且避免经过Y轴
-    double crossProduct = xy1 * xz2 - xy2 * xz1;
+    // 向量XY和XZ的模长
+    double xy_magnitude = std::sqrt(xy_x * xy_x + xy_y * xy_y);
+    double xz_magnitude = std::sqrt(xz_x * xz_x + xz_y * xz_y);
+
+    // 计算夹角的cos值
+    double cosTheta = dotProduct / (xy_magnitude * xz_magnitude);
+
+    // 使用反余弦函数计算角度
+    double angle = std::acos(cosTheta);
+
+    // 计算向量的叉积来判断旋转方向
+    double crossProduct = xy_x * xz_y - xy_y * xz_x;
+
+    // 如果叉积为负，说明角度为负
     if (crossProduct < 0)
-    { // 顺时针旋转
-        if (beta < alpha)
-        {
-            theta = 360.0 - theta; // 避免经过Y轴
-        }
-    }
-    else
-    { // 逆时针旋转
-        if (beta > alpha)
-        {
-            theta = -(360.0 - theta); // 避免经过Y轴
-        }
+    {
+        angle = -angle;
     }
 
-    return theta;
+    return angle;
 }

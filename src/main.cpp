@@ -20,33 +20,49 @@ using namespace pcl;
 using namespace cv;
 using namespace std;
 
+ofstream _angle_out("../data/angle.txt", ios::out);
+ofstream _agvPose_out("../data/agvPose.txt", ios::out);
+ofstream _t_out("../data/t.txt", ios::out);
+
 void initThread()
 {
     // currentState = State::INIT_RUNNING;
-    networkCamera.setUrl(cameraUrl);
-    if (!networkCamera.open())
+    // {
+    //     std::lock_guard<std::mutex> stateLock(stateMutex);
+    //     if (currentState != State::FINISHED)
+    //         currentState = State::CAPUTRE_IMAGE;
+    // }
+    // namedWindow("origin camera image", WINDOW_NORMAL);
+    // return;
+
+    // networkCamera.setUrl(cameraUrl);
+    // if (!networkCamera.open())
+    // {
+    //     {
+    //         std::lock_guard<std::mutex> stateLock(stateMutex);
+    //         currentState = State::FINISHED;
+    //     }
+    // }
+    // else
+    // {
+    int imageLength = stoi(config["imageLength"]);
+    int imageWidth = stoi(config["imageWidth"]);
+    targetPoints = readMapPoinits("../data/points.txt");
+    translationVector << -stoi(config["imageLength"]) / 2 * stod(config["scale"]),
+        -stoi(config["imageWidth"]) / 2 * stod(config["scale"]);
+    cout << translationVector << endl;
     {
-        {
-            std::lock_guard<std::mutex> lock(stateMutex);
-            currentState = State::FINISHED;
-        }
+        std::lock_guard<std::mutex> stateLock(stateMutex);
+        if (currentState != State::FINISHED)
+            currentState = State::CAPUTRE_IMAGE;
     }
-    else
-    {
-        int imageLength = stoi(config["imageLength"]);
-        int imageWidth = stoi(config["imageWidth"]);
-        targetPoints = readMapPoinits("../data/points.txt");
-        translationVector << -imageLength / 2 * stod(config["scale"]),
-            -imageWidth / 2 * stod(config["scale"]);
-        {
-            std::lock_guard<std::mutex> lock(stateMutex);
-            if (currentState != State::FINISHED)
-                currentState = State::CAPUTRE_IMAGE;
-        }
-    }
-    // agv.setPermission();
-    // targetPose = {0, 1290.22};
-    // targetPose = {0, -1290.22};
+    // namedWindow("origin camera image", WINDOW_NORMAL);
+    namedWindow("final match result", WINDOW_AUTOSIZE);
+    agv.setPermission();
+    targetPose.first = stod(config["targetPoseX"]);
+    targetPose.second = stod(config["targetPoseY"]);
+    // }
+
     return;
 }
 
@@ -59,40 +75,96 @@ void finishThread()
 void captureImageThread()
 {
     // currentState = State::CAPUTRE_IMAGE_RUNNING;
-    cv::namedWindow("Camera", cv::WINDOW_AUTOSIZE);
-    cv::Mat frame;
-    if (!networkCamera.getFrame(frame))
+    // {
+    //     std::lock_guard<std::mutex> stateLock(stateMutex);
+    //     if (currentState != State::FINISHED)
+    //         currentState = State::CAPUTRE_IMAGE_RUNNING;
+    // }
+    // cout << "capture image" << endl;
     {
-        cout << "get camera image failed" << endl;
-        {
-            std::lock_guard<std::mutex> lock(stateMutex);
-            if (currentState != State::FINISHED)
-                currentState = State::CAPUTRE_IMAGE;
-        }
+        std::lock_guard<std::mutex> stateLock(stateMutex);
+        currentState = State::CAPUTRE_IMAGE_RUNNING;
     }
-    else
+    cap.open(cameraUrl);
     {
-        frame.copyTo(buffer);
+        std::lock_guard<std::mutex> stateLock(stateMutex);
+        currentState = State::CAPUTRE_IMAGE;
+    }
+    cv::Mat frame;
+    while (true)
+    {
+        // cout << "while true" << endl;
+        // std::lock_guard<std::mutex> bufferLock(bufferMutex);
+        // frame.copyTo(buffer);
+
+        cap.read(frame);
+        // imshow("origin camera image", frame);
+        waitKey(1);
         {
-            std::lock_guard<std::mutex> lock(stateMutex);
-            if (currentState != State::FINISHED)
-                currentState = State::FEATURE_DETECT;
+            std::lock_guard<std::mutex> stateLock(stateMutex);
+
+            if (currentState == State::CAPUTRE_IMAGE)
+            {
+                std::lock_guard<std::mutex> bufferLock(bufferMutex);
+                frame.copyTo(buffer);
+                if (currentState != State::FINISHED)
+                    currentState = State::FEATURE_DETECT;
+            }
+            else if (currentState == State::FINISHED)
+            {
+                cap.release();
+                break;
+            }
         }
+
+        // currentState = State::CAPUTRE_IMAGE;
     }
     return;
+    // cv::namedWindow("Camera", cv::WINDOW_AUTOSIZE);
+    // cv::Mat frame;
+    // if (!networkCamera.getFrame(buffer))
+    // {
+    //     cout << "get camera image failed" << endl;
+    //     {
+    //         std::lock_guard<std::mutex> stateLock(stateMutex);
+    //         if (currentState != State::FINISHED)
+    //             currentState = State::CAPUTRE_IMAGE;
+    //     }
+    // }
+    // else
+    // {
+    //     {
+    //         std::lock_guard<std::mutex> bufferLock(bufferMutex);
+    //         // frame.copyTo(buffer);
+    //         imshow("origin camera image", buffer);
+    //         waitKey(1);
+    //     }
+    //     {
+    //         std::lock_guard<std::mutex> stateLock(stateMutex);
+    //         if (currentState != State::FINISHED)
+    //             // currentState = State::FEATURE_DETECT;
+    //             currentState = State::CAPUTRE_IMAGE;
+    //     }
+    // }
+    // return;
 }
 
 void featureDetectThread()
 {
     // currentState = State::FEATURE_DETECT_RUNNING;
-    cv::Mat frame = buffer.clone();
+    cv::Mat frame;
+    {
+        std::lock_guard<std::mutex> bufferLock(bufferMutex);
+        frame = buffer.clone();
+    }
+
     ImageProcessor processor(frame);
     processor.convertToGray();
     processor.convertGrayToBinary();
     processor.findContours();
     processor.detectCircles();
     {
-        std::lock_guard<std::mutex> lock(stateMutex);
+        std::lock_guard<std::mutex> stateLock(stateMutex);
         if (currentState != State::FINISHED)
             currentState = State::MATCHING;
     }
@@ -107,13 +179,13 @@ void matchingThread()
     {
         std::cout << "ERROR: There are so many detect points..." << std::endl;
         {
-            std::lock_guard<std::mutex> lock(stateMutex);
+            std::lock_guard<std::mutex> stateLock(stateMutex);
             if (currentState != State::FINISHED)
                 currentState = State::CAPUTRE_IMAGE;
         }
         return;
     }
-    // cout << translationVector << endl;
+    cout << "icp translationVector = " << translationVector << endl;
 
     ICPAlgorithm icpAlg(sourcePoints, targetPoints, rotationMatrix, translationVector);
     icpAlg.calTransformed();
@@ -122,7 +194,11 @@ void matchingThread()
     if (icpFlag == 0)
     {
         correspondences = icpAlg.getCorrespondences();
-        cv::Mat img = buffer.clone();
+        cv::Mat img;
+        {
+            std::lock_guard<std::mutex> bufferLock(bufferMutex);
+            img = buffer.clone();
+        }
         for (int i = 0; i < sourcePoints.size(); i++)
         {
             // Point center(cvRound(sourcePoints[i].first), cvRound(sourcePoints[i].second));
@@ -138,7 +214,7 @@ void matchingThread()
         imshow("final match result", img);
         waitKey(1);
         {
-            std::lock_guard<std::mutex> lock(stateMutex);
+            std::lock_guard<std::mutex> stateLock(stateMutex);
             if (currentState != State::FINISHED)
                 currentState = State::MAPPING;
         }
@@ -146,7 +222,7 @@ void matchingThread()
     else
     {
         {
-            std::lock_guard<std::mutex> lock(stateMutex);
+            std::lock_guard<std::mutex> stateLock(stateMutex);
             if (currentState != State::FINISHED)
                 currentState = State::CAPUTRE_IMAGE;
         }
@@ -158,39 +234,68 @@ void mappingThread()
 {
     // currentState = State::MAPPING_RUNNING;
     PNPAlgorithm pnpAlg(sourcePoints, targetPoints, correspondences);
-    pnpAlg.estimateCameraPose();
-    cv::Mat pose_inv = pnpAlg.getPose();
-
-    cv::Mat camera_position = pose_inv(cv::Rect(3, 0, 1, 3));
-
-    int filterFlag = filter.addPosition({camera_position.at<double>(0), camera_position.at<double>(1)});
-    if (filterFlag == 0)
+    pnpAlg.setSolveParams(stoi(config["iterationsCount"]), stof(config["reprojectionError"]),
+                          stod(config["confidence"]));
+    bool pnpFlag = pnpAlg.estimateCameraPose();
+    if (pnpFlag)
     {
-        currentPose = filter.getPose();
+        cv::Mat pose_inv = pnpAlg.getPose();
+        // cout << "----pose_inv----" << endl;
+        // cout << pose_inv << endl;
 
-        rotationMatrix = getRotationMatrix(pose_inv);
-        translationVector = getTranslationVector(pose_inv);
-        cout << "----new rotationMatrix----" << endl;
+        cv::Mat camera_position = pose_inv(cv::Rect(3, 0, 1, 3));
+
+        cout << "----current rotationMatrix----" << endl;
         cout << rotationMatrix << endl;
-        cout << "----new translationMatrix----" << endl;
+        cout << "----current translationMatrix----" << endl;
         cout << translationVector << endl;
+        Eigen::Matrix<double, 3, 1> transform = rotationMatrix * basic_t;
+        // currentPose.first -= transform(0, 0);
+        // currentPose.second -= transform(1, 0);
+        double _x = camera_position.at<double>(0) - transform(0, 0);
+        double _y = camera_position.at<double>(1) - transform(1, 0);
 
-        out << currentPose.first + stoi(config["imageLength"]) / 2 * stod(config["scale"]) << " "
-            << currentPose.second + stoi(config["imageWidth"]) / 2 * stod(config["scale"]) << endl;
+        int filterFlag = filter.addPosition({_x, _y});
+        if (filterFlag == 0)
         {
-            std::lock_guard<std::mutex> lock(stateMutex);
-            if (currentState != State::FINISHED)
-                // currentState = State::MOVING;
-                currentState = State::CAPUTRE_IMAGE;
+            currentPose = filter.getPose();
+
+            rotationMatrix = (rotationMatrix + getRotationMatrix(pose_inv)) / 2;
+            translationVector = (translationVector + getTranslationVector(pose_inv)) / 2;
+            cout << "----new rotationMatrix----" << endl;
+            cout << rotationMatrix << endl;
+            cout << "----new translationMatrix----" << endl;
+            cout << translationVector << endl;
+            // translationVector += basic_t;
+
+            out << currentPose.first << " " << currentPose.second << endl;
+            // double theta = std::atan2(rotationMatrix(1, 0), rotationMatrix(0, 0));
+
+            // // 将角度转换为度数（如果需要）
+            // double theta_degrees = theta * 180.0 / M_PI;
+
+            Eigen::AngleAxisd angleAxis(rotationMatrix);
+            double angle = angleAxis.angle(); // 提取旋转角度（弧度）
+
+            // 将角度转换为度数
+            double angle_degrees = angle * 180.0 / M_PI;
+
+            _t_out << translationVector(0, 0) << "," << translationVector(1, 0) << endl;
+            _angle_out << angle_degrees << endl;
+
+            {
+                std::lock_guard<std::mutex> stateLock(stateMutex);
+                if (currentState != State::FINISHED)
+                    currentState = State::MOVING;
+                // currentState = State::CAPUTRE_IMAGE;
+            }
+            return;
         }
     }
-    else
     {
-        {
-            std::lock_guard<std::mutex> lock(stateMutex);
-            if (currentState != State::FINISHED)
-                currentState = State::CAPUTRE_IMAGE;
-        }
+        std::lock_guard<std::mutex> stateLock(stateMutex);
+        if (currentState != State::FINISHED)
+            currentState = State::CAPUTRE_IMAGE;
     }
     return;
 }
@@ -202,15 +307,32 @@ void movingThread()
     Eigen::Matrix<double, 3, 1> tmp = rotationMatrix * relative;
 
     agvPose = {currentPose.first + tmp(0, 0), currentPose.second + tmp(1, 0)};
-    if (responseJson["vx"] == 0 && responseJson["vy"] == 0 && responseJson["w"] == 0)
+    cout << "agvPose = (" << agvPose.first << "," << agvPose.second << ")" << endl;
+    _agvPose_out << "(" << agvPose.first << "," << agvPose.second << ")" << endl;
+
+    if (config["mode"] != "test")
+    {
+        {
+            std::lock_guard<std::mutex> stateLock(stateMutex);
+            if (currentState != State::FINISHED)
+                currentState = State::CAPUTRE_IMAGE;
+        }
+        return;
+    }
+
+    if (responseJson["is_stop"] == true)
     {
         if (agvMoveStep == AGVMoveStep::ROTATE)
         {
             double angle = calculateAngle(currentPose, agvPose, targetPose);
+            // 将角度从弧度转换为度数
+            _angle_out << "rotate angle = " << angle * 180.0 / M_PI << endl;
             int direction = 1;
-            if (abs(angle) < 6)
+            if (abs(angle) < 0.03)
             {
-                agvMoveStep = AGVMoveStep::FORWARD;
+                cout << "finish rotate" << endl;
+                if (config["testMode"] != "only rotate")
+                    agvMoveStep = AGVMoveStep::FORWARD;
             }
             else
             {
@@ -218,51 +340,57 @@ void movingThread()
                 {
                     direction = -1;
                 }
-                else
-                {
-                    agv.rotate(angle * M_PI / 180.0, direction * 0.1);
-                }
+                cout << "request to agv rotate" << endl;
+                // std::cout << "waiting before agv rotate\n";
+                // std::this_thread::sleep_for(std::chrono::milliseconds(10000));
+                _angle_out << "starte rotate, rotate params = " << abs(angle) << ", " << direction * 0.0015 << endl;
+                agv.rotate(abs(angle), direction * 0.0015);
             }
         }
         if (agvMoveStep == AGVMoveStep::FORWARD)
         {
             double dist = distance(agvPose, targetPose);
             int direction = 1;
-            if (abs(dist) < 5)
+            if (dist < 50)
             {
-                cout << "arrive to the target pose" << endl;
-                sleep(10);
+                _agvPose_out << "arrive to the target pose" << endl;
+                cout << "waiting back" << endl;
+                sleep(100);
+                cout << "finish working" << endl;
                 agvMoveStep = AGVMoveStep::BACK;
             }
             else
             {
-                if (distance({0, 0}, agvPose) > distance({0, 0}, targetPose))
+                if (distance({0, 0}, agvPose) < distance({0, 0}, targetPose))
                 {
                     direction = -1;
                 }
-                agv.move(dist, direction * 0.2, 0);
+                _agvPose_out << "start move, move params = " << dist / 1000 << "," << direction * 0.002 << endl;
+                agv.move(dist / 1000, direction * 0.005, 0);
+                // agvMoveStep = AGVMoveStep::ROTATE;
             }
         }
         if (agvMoveStep == AGVMoveStep::BACK)
         {
             double dist = distance({0, 0}, currentPose);
             int direction = 1;
-            if (abs(dist) < 20)
+            if (abs(dist) < 150)
             {
                 cout << "back to the zero pose" << endl;
+                sleep(100);
             }
             else
             {
-                if (distance(currentPose, agvPose) <= distance({0, 0}, agvPose))
+                if (distance(currentPose, agvPose) > distance({0, 0}, agvPose))
                 {
                     direction = -1;
                 }
-                agv.move(dist, direction * 0.2, 0);
+                agv.move(dist / 1000, direction * 0.01, 0);
             }
         }
     }
     {
-        std::lock_guard<std::mutex> lock(stateMutex);
+        std::lock_guard<std::mutex> stateLock(stateMutex);
         if (currentState != State::FINISHED)
             currentState = State::CAPUTRE_IMAGE;
     }
@@ -454,7 +582,7 @@ int main()
             {
                 std::cout << "\nQ key pressed. Stopping the system..." << std::endl;
                 {
-                    std::lock_guard<std::mutex> lock(stateMutex);
+                    std::lock_guard<std::mutex> stateLock(stateMutex);
                     currentState = State::FINISHED;
                 }
                 threads.emplace_back(finishThread);
@@ -484,23 +612,47 @@ int main()
         {
         case State::INIT:
         {
-            std::lock_guard<std::mutex> lock(stateMutex);
+            std::lock_guard<std::mutex> stateLock(stateMutex);
             if (currentState != State::FINISHED)
                 currentState = State::INIT_RUNNING;
         }
             threads.emplace_back(initThread);
+            std::this_thread::sleep_for(std::chrono::milliseconds(1000));
+            threads.emplace_back(captureImageThread);
+            std::this_thread::sleep_for(std::chrono::milliseconds(5000));
             break;
         case State::CAPUTRE_IMAGE:
-        {
-            std::lock_guard<std::mutex> lock(stateMutex);
-            if (currentState != State::FINISHED)
-                currentState = State::CAPUTRE_IMAGE_RUNNING;
-        }
-            threads.emplace_back(captureImageThread);
+            std::this_thread::sleep_for(std::chrono::milliseconds(100));
+            // {
+            //     std::lock_guard<std::mutex> stateLock(stateMutex);
+            //     if (currentState != State::FINISHED)
+            //         currentState = State::CAPUTRE_IMAGE_RUNNING;
+
+            //     std::lock_guard<std::mutex> bufferLock(bufferMutex);
+            //     // frame.copyTo(buffer);
+            //     // cap.read(buffer);
+            //     cap >> buffer;
+            //     if (buffer.empty())
+            //     {
+            //         cerr << "Error: 无法读取帧" << endl;
+            //         if (currentState != State::FINISHED)
+            //             currentState = State::CAPUTRE_IMAGE;
+            //     }
+            //     else
+            //     {
+            //         imshow("origin camera image", buffer);
+            //         waitKey(1);
+            //         if (currentState != State::FINISHED)
+            //             // currentState = State::FEATURE_DETECT;
+            //             currentState = State::CAPUTRE_IMAGE;
+            //     }
+            // }
+            // cout << "start a thread for image captture" << endl;
+            // threads.emplace_back(captureImageThread);
             break;
         case State::FEATURE_DETECT:
         {
-            std::lock_guard<std::mutex> lock(stateMutex);
+            std::lock_guard<std::mutex> stateLock(stateMutex);
             if (currentState != State::FINISHED)
                 currentState = State::FEATURE_DETECT_RUNNING;
         }
@@ -508,7 +660,7 @@ int main()
             break;
         case State::MATCHING:
         {
-            std::lock_guard<std::mutex> lock(stateMutex);
+            std::lock_guard<std::mutex> stateLock(stateMutex);
             if (currentState != State::FINISHED)
                 currentState = State::MATCHING_RUNNING;
         }
@@ -516,7 +668,7 @@ int main()
             break;
         case State::MAPPING:
         {
-            std::lock_guard<std::mutex> lock(stateMutex);
+            std::lock_guard<std::mutex> stateLock(stateMutex);
             if (currentState != State::FINISHED)
                 currentState = State::MAPPING_RUNNING;
         }
@@ -524,7 +676,7 @@ int main()
             break;
         case State::MOVING:
         {
-            std::lock_guard<std::mutex> lock(stateMutex);
+            std::lock_guard<std::mutex> stateLock(stateMutex);
             if (currentState != State::FINISHED)
                 currentState = State::MOVING_RUNNING;
         }
@@ -532,7 +684,7 @@ int main()
             break;
         case State::TEST:
         {
-            std::lock_guard<std::mutex> lock(stateMutex);
+            std::lock_guard<std::mutex> stateLock(stateMutex);
             currentState = State::FINISHED;
         }
             threads.emplace_back(testThread);
@@ -541,7 +693,7 @@ int main()
             break;
         }
         // cout << threads.size() << endl;
-        std::this_thread::sleep_for(std::chrono::milliseconds(100));
+        std::this_thread::sleep_for(std::chrono::milliseconds(200));
     }
 
     for (auto &t : threads)

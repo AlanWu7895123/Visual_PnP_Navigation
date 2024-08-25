@@ -25,9 +25,10 @@ public:
     PNPAlgorithm(const vector<pair<double, double>> &source, const vector<pair<double, double>> &target,
                  const vector<int> &correspondences);
     void convertToPointCloud(const vector<pair<double, double>> &points, PointCloud::Ptr &cloud, float z);
-    void estimateCameraPose();
+    bool estimateCameraPose();
     cv::Mat getPose();
-    void setCameraConfig(cv::Mat cameraMatrix, cv::Mat distCoeffs);
+    void setCameraConfig(cv::Mat myCameraMatrix, cv::Mat myDistCoeffs);
+    void setSolveParams(int _iterationsCount, float _reprojectionError, double _confidence);
 
 private:
     std::vector<std::pair<double, double>> source;
@@ -35,6 +36,9 @@ private:
     vector<int> correspondences;
     cv::Mat pose;
     cv::Mat cameraMatrix, distCoeffs;
+    int iterationsCount = 300;      // Increased iterations
+    float reprojectionError = 8.0f; // Moderate reprojection error threshold
+    double confidence = 0.99;       // High confidence
 };
 
 #endif // PNPALGORITHM_H

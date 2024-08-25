@@ -46,6 +46,7 @@ nlohmann::json AGV::sendToAGV(Controller &controller, uint16_t type, std::string
 
 nlohmann::json AGV::move(double dist, double vx, double vy)
 {
+    cout << "move params = " << dist << ", " << vx << endl;
     AGVTranslation translation;
     translation.dist = dist;
     translation.vx = vx;
@@ -59,14 +60,15 @@ nlohmann::json AGV::move(double dist, double vx, double vy)
 
     nlohmann::json translationResponseJson = sendToAGV(moveController, 3055, jStrTranslation);
 
-    std::cout << "waiting\n";
-    std::this_thread::sleep_for(std::chrono::milliseconds(10000));
+    // std::cout << "waiting\n";
+    // std::this_thread::sleep_for(std::chrono::milliseconds(500));
 
     return translationResponseJson;
 }
 
 nlohmann::json AGV::rotate(double angle, double vw)
 {
+    cout << "rotate params = " << angle << ", " << vw << endl;
     AGVRotation rotation;
     rotation.angle = angle;
     rotation.vw = vw;
@@ -78,8 +80,8 @@ nlohmann::json AGV::rotate(double angle, double vw)
 
     nlohmann::json rotationResponseJson = sendToAGV(moveController, 3056, jStrRotation);
 
-    std::cout << "waiting\n";
-    std::this_thread::sleep_for(std::chrono::milliseconds(10000));
+    // std::cout << "waiting\n";
+    // std::this_thread::sleep_for(std::chrono::milliseconds(1000));
     return rotationResponseJson;
 }
 

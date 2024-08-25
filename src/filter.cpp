@@ -8,7 +8,20 @@ CameraPositionFilter::CameraPositionFilter(size_t windowSize, std::vector<double
 
 int CameraPositionFilter::addPosition(const std::pair<double, double> &camera_position)
 {
-    window.push_back(camera_position);
+    pair<double, double> position = camera_position;
+    cout << "camera position = (" << camera_position.first << "," << camera_position.second << ")" << endl;
+    if (abs(camera_position.first) > 10000 || abs(camera_position.second) > 10000)
+    {
+        cout << "illegal position, skipped" << endl;
+        return 1;
+    }
+
+    if (abs(camera_position.first) < 0.01)
+        position.first = 0;
+    if (abs(camera_position.second) < 0.01)
+        position.second = 0;
+
+    window.push_back(position);
     if (window.size() > windowSize)
     {
         if (distance(avg_position, camera_position) > 1000)

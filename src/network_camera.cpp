@@ -41,7 +41,8 @@ bool NetworkCamera::getFrame(cv::Mat &frame)
         std::cerr << "Error: RTSP stream is not opened." << std::endl;
         return false;
     }
-    cap >> frame;
+    // cap >> frame;
+    cap.read(frame);
     if (frame.empty())
     {
         std::cerr << "Error: Could not read frame from RTSP stream." << std::endl;

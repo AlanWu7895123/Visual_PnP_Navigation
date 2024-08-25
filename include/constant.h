@@ -35,11 +35,13 @@ extern std::vector<std::thread> threads;
 
 extern Camera camera;
 extern NetworkCamera networkCamera;
+extern cv::VideoCapture cap;
 extern cv::Mat myCameraMatrix, myDistCoeffs;
 extern std::string cameraUrl;
 extern AGV agv;
 
 extern cv::Mat buffer;
+extern std::mutex bufferMutex;
 extern pair<double, double> targetPose;
 extern pair<double, double> currentPose;
 extern pair<double, double> agvPose;
@@ -53,6 +55,7 @@ extern std::vector<std::pair<double, double>> targetPoints;
 extern vector<int> correspondences;
 extern Matrix3d rotationMatrix;
 extern Vector2d translationVector;
+extern Vector3d basic_t;
 extern ofstream out;
 
 #endif // CONSTANT_H

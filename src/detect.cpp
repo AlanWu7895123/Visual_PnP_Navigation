@@ -45,8 +45,9 @@ void ImageProcessor::detectCircles()
 {
     cv::Mat bw_image;
     cvtColor(contoursImg, bw_image, COLOR_BGR2GRAY);
-    HoughCircles(bw_image, circles, HOUGH_GRADIENT, 3, bw_image.rows / 12, 200,
-                 100, stoi(config["houghMinRadius"]), stoi(config["houghMaxRadius"]));
+    HoughCircles(bw_image, circles, HOUGH_GRADIENT, stoi(config["houghDp"]), stoi(config["houghMinDist"]),
+                 stoi(config["houghParam1"]),
+                 stoi(config["houghParam2"]), stoi(config["houghMinRadius"]), stoi(config["houghMaxRadius"]));
 
     cvtColor(bw_image, detectImg, COLOR_GRAY2BGR);
 
