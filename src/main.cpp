@@ -351,12 +351,16 @@ void movingThread()
         {
             double dist = distance(agvPose, targetPose);
             int direction = 1;
-            if (dist < 50)
+            if (dist < 30)
             {
                 _agvPose_out << "arrive to the target pose" << endl;
                 cout << "waiting back" << endl;
                 sleep(100);
                 cout << "finish working" << endl;
+                {
+                    std::lock_guard<std::mutex> stateLock(stateMutex);
+                    currentState = State::FINISHED;
+                }
                 agvMoveStep = AGVMoveStep::BACK;
             }
             else
@@ -366,8 +370,8 @@ void movingThread()
                     direction = -1;
                 }
                 _agvPose_out << "start move, move params = " << dist / 1000 << "," << direction * 0.002 << endl;
-                agv.move(dist / 1000, direction * 0.005, 0);
-                // agvMoveStep = AGVMoveStep::ROTATE;
+                agv.move(dist / 1000, direction * 0.01, 0);
+                agvMoveStep = AGVMoveStep::ROTATE;
             }
         }
         if (agvMoveStep == AGVMoveStep::BACK)

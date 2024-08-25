@@ -49,6 +49,7 @@ extern pair<double, double> agvPose;
 extern const size_t windowSize;
 extern std::vector<double> weights;
 extern CameraPositionFilter filter;
+extern CameraPositionFilter tFilter;
 
 extern vector<pair<double, double>> sourcePoints;
 extern std::vector<std::pair<double, double>> targetPoints;

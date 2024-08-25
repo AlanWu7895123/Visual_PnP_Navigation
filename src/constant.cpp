@@ -23,12 +23,13 @@ pair<double, double> targetPose;
 pair<double, double> currentPose;
 pair<double, double> agvPose;
 
-const size_t windowSize = 2;
-std::vector<double> weights = {1, 1};
-// const size_t windowSize = 10;
-// std::vector<double> weights = {1, 1, 1, 1, 1, 1, 1, 1, 1, 1};
+// const size_t windowSize = 2;
+// std::vector<double> weights = {1, 1};
+const size_t windowSize = 10;
+std::vector<double> weights = {1, 1, 1, 1, 1, 1, 1, 1, 1, 1};
 // std::vector<double> weights = {0.0003, 0.0022, 0.0150, 0.0650, 0.1480, 0.2220, 0.2220, 0.1480, 0.0650, 0.0150};
 CameraPositionFilter filter(windowSize, weights);
+CameraPositionFilter tFilter(windowSize, weights);
 
 vector<pair<double, double>> sourcePoints;
 std::vector<std::pair<double, double>> targetPoints;

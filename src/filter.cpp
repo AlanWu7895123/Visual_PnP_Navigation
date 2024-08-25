@@ -24,16 +24,16 @@ int CameraPositionFilter::addPosition(const std::pair<double, double> &camera_po
     window.push_back(position);
     if (window.size() > windowSize)
     {
-        if (distance(avg_position, camera_position) > 1000)
-        {
-            std::cout << "ERROR: The new point is so far..." << std::endl;
-            window.pop_back();
-            return 1;
-        }
-        else
-        {
-            window.pop_front();
-        }
+        // if (distance(avg_position, camera_position) > 1000)
+        // {
+        //     std::cout << "ERROR: The new point is so far..." << std::endl;
+        //     window.pop_back();
+        //     return 1;
+        // }
+        // else
+        // {
+        window.pop_front();
+        // }
     }
 
     if (window.size() == windowSize)
