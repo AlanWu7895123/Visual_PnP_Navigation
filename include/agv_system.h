@@ -19,6 +19,9 @@
 
 #include "abstract_state_machine.h"
 
+using namespace pcl;
+using namespace cv;
+using namespace std;
 using namespace efsm;
 
 class AGVSystem_start_param : public start_param_base

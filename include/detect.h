@@ -4,7 +4,7 @@
 #include <opencv2/opencv.hpp>
 #include <iostream>
 #include <fstream>
-#include "constant.h" / mnt / hgfs / VMShareFolder / mach_subflow_machining_fsm.cpp / mnt / hgfs / VMShareFolder / mach_subflow_machining_fsm.h
+#include "constant.h"
 
 class ImageProcessor
 {
