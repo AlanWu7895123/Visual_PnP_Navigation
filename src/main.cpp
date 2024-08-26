@@ -20,6 +20,7 @@
 using namespace pcl;
 using namespace cv;
 using namespace std;
+using namespace efsm;
 
 ofstream _angle_out("../data/angle.txt", ios::out);
 ofstream _agvPose_out("../data/agvPose.txt", ios::out);

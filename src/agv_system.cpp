@@ -1,5 +1,7 @@
 #include "agv_system.h"
 
+using namespace efsm;
+
 AGVSystem::AGVSystem(int type)
     : _angle_out("../data/angle.txt", ios::out),
       _agvPose_out("../data/agvPose.txt", ios::out),
@@ -17,12 +19,43 @@ AGVSystem::AGVSystem(int type)
     }
 }
 
+bool AGVSystem::restart(start_param_base::ptr start_param)
+{
+    start_param_ = std::dynamic_pointer_cast<AGVSystem_start_param>(start_param);
+
+    if (!start_param_)
+    {
+        return false;
+    }
+    setTarget(start_param_->x, start_param_->y);
+    run();
+    return true;
+}
+
+bool AGVSystem::pause() { return false; }
+
+bool AGVSystem::resume() { return false; }
+
+bool AGVSystem::stop()
+{
+    std::lock_guard<std::mutex> stateLock(stateMutex);
+    currentState = State::FINISHED;
+    return true;
+}
+
+void AGVSystem::run_once() {}
+
 void AGVSystem::setTarget(double x, double y)
 {
     targetPose.first = x;
     targetPose.second = y;
 }
 
+State AGVSystem::getCurrentState()
+{
+    std::lock_guard<std::mutex> stateLock(stateMutex);
+    return currentState;
+}
 void AGVSystem::run()
 {
     cout << "target pose is (" << targetPose.first << "," << targetPose.second << ")" << endl;

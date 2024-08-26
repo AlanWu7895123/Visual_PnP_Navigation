@@ -17,12 +17,35 @@
 #include "agv.h"
 #include "constant.h"
 
-class AGVSystem
+#include "abstract_state_machine.h"
+
+using namespace efsm;
+
+class AGVSystem_start_param : public start_param_base
 {
 public:
+    using ptr = std::shared_ptr<AGVSystem_start_param>;
+
+    double x;
+    double y;
+};
+
+class AGVSystem final : public abstract_state_machine
+{
+public:
+    using ptr = std::shared_ptr<AGVSystem>;
     AGVSystem(int type); // 构造函数，初始化AGV系统
-    void run();          // 启动AGV系统的主要功能
+
+    bool restart(start_param_base::ptr) override;
+    bool pause() override;
+    bool resume() override;
+    bool stop() override;
+
+    void run_once() override;
+
+    void run(); // 启动AGV系统的主要功能
     void setTarget(double x, double y);
+    State getCurrentState();
 
 private:
     // 初始化线程
@@ -50,6 +73,8 @@ private:
     void testThread();
 
     std::ofstream _angle_out, _agvPose_out, _t_out; // 输出文件流
+
+    AGVSystem_start_param::ptr start_param_{nullptr};
 
     // 添加其他必要的成员变量
 };
