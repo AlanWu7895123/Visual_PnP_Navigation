@@ -119,7 +119,7 @@ nlohmann::json AGV::setPermission()
     jConfig["nick_name"] = "srd-seer-mizhan";
     std::string jStrConfig = jConfig.dump();
     nlohmann::json configResponseJson = sendToAGV(configController, 4005, jStrConfig);
-    std::cout << "waiting\n";
-    std::this_thread::sleep_for(std::chrono::milliseconds(5000));
+    // std::cout << "waiting\n";
+    // std::this_thread::sleep_for(std::chrono::milliseconds(5000));
     return configResponseJson;
 }
