@@ -330,10 +330,12 @@ void AGVSystem::mappingThread()
             cout << rotationMatrix << endl;
             cout << "----new translationMatrix----" << endl;
             cout << translationVector << endl;
-            out << currentPose.first << " " << currentPose.second << endl;
+
             Eigen::AngleAxisd angleAxis(rotationMatrix);
             double angle = angleAxis.angle();
             double angle_degrees = angle * 180.0 / M_PI;
+
+            out << currentPose.first << " " << currentPose.second << endl;
             _t_out << translationVector(0, 0) << "," << translationVector(1, 0) << endl;
             _angle_out << angle_degrees << endl;
 
